@@ -1,0 +1,3 @@
+[submodule "discord-modubot"]
+	path = discord-modubot
+	url = https://github.com/wow13524/discord-modubot.git
