@@ -10,17 +10,15 @@ if TYPE_CHECKING:
 DEFAULT_DB_NAME = "data.db"
 
 class Module(ModuleBase):
-    name = "db_sqlite"
-
-    def __init__(self,bot: 'Bot'):
+    def __init__(self,bot: 'Bot') -> None:
         self.bot: Bot = bot
         self.connection: aiosqlite.Connection
     
-    async def init(self):
+    async def init(self) -> None:
         self.connection = await aiosqlite.connect(join(self.bot.work_dir,DEFAULT_DB_NAME))
     
-    async def postinit(self):
-        func_inject: FuncInject = self.bot.get_module("func_inject")
+    async def postinit(self) -> None:
+        func_inject: FuncInject = self.bot.get_module("modules.core.func_inject")
         func_inject.inject(self.close)
     
     async def close(self):

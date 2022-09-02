@@ -2,12 +2,28 @@ import discord
 import importlib
 import os
 from .bot_config import BotConfig
-from typing import Any,Dict,Optional,Type,TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .module_base import ModuleBase
+from types import ModuleType
+from typing import Any,Dict,List,Optional,Type
 
 DEFAULT_CONFIG_NAME = "config.json"
+
+def import_recursive(module: ModuleType,out: List[ModuleType]=[]):
+    if hasattr(module,"__all__"):
+        for module_name in getattr(module,"__all__"):
+            import_recursive(getattr(module,module_name),out)
+    else:
+        out.append(module)
+    return out
+
+class ModuleBase:
+    def __init__(self,bot: 'Bot') -> None:
+        pass
+    
+    async def init(self) -> None:
+        pass
+    
+    async def postinit(self) -> None:
+        pass
 
 class Bot(discord.AutoShardedClient):
     def __init__(self,work_dir: str = os.getcwd(),config_name: str=DEFAULT_CONFIG_NAME):
@@ -21,17 +37,14 @@ class Bot(discord.AutoShardedClient):
             setattr(intents,intent,bool(value))
         super().__init__(intents=intents)
     
-    def _preload_modules(self) -> Dict[str,Any]:
+    def _preload_modules(self) -> Dict[str,ModuleBase]:
         loaded_modules: Dict[str,ModuleBase] = {}
-        name_path_dict: Dict[str,str] = {}
         for module_path in self.config.enabled_modules:
-            module: Type[ModuleBase] = importlib.import_module(module_path).Module
-            module_name: str = module.name
-            if module_name in name_path_dict:
-                raise Exception(f"modules '{name_path_dict[module_name]}' and '{module_path}' share the same name '{module_name}'")
-            else:
-                name_path_dict[module_name] = module_path
-                loaded_modules[module_name] = module(self)
+            for module in import_recursive(importlib.import_module(module_path)):
+                module_name: str = module.__name__
+                assert hasattr(module,"Module"), f"'{module_name}' is not a valid module"
+                module_class: Type[ModuleBase] = getattr(module,"Module")
+                loaded_modules[module_name] = module_class(self)
         return loaded_modules
     
     def get_module(self,module_name: str) -> Any:

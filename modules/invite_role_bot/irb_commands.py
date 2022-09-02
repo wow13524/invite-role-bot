@@ -12,14 +12,12 @@ if TYPE_CHECKING:
     from ..core.slash_commands import Module as SlashCommands
 
 class Module(ModuleBase):
-    name = "irb_commands"
-
     def __init__(self,bot: 'Bot'):
         self.bot: Bot = bot
     
     async def postinit(self):
-        data_persistence: DataPersistence = self.bot.get_module("irb_data_persistence")
-        slash_commands: SlashCommands = self.bot.get_module("slash_commands")
+        data_persistence: DataPersistence = self.bot.get_module("modules.invite_role_bot.irb_data_persistence")
+        slash_commands: SlashCommands = self.bot.get_module("modules.core.slash_commands")
         cmd_tree: CommandTree[Bot] = slash_commands.cmd_tree
 
         @cmd_tree.command(name="connect",description="test connect command!")

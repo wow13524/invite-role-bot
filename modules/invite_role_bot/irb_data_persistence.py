@@ -8,14 +8,12 @@ if TYPE_CHECKING:
     from ..core.db_sqlite import Module as DBSQLite
 
 class Module(ModuleBase):
-    name = "irb_data_persistence"
-
     def __init__(self,bot: 'Bot') -> None:
         self.bot: 'Bot' = bot
         self.connection: Connection
     
     async def postinit(self) -> None:
-        db_sqlite: DBSQLite = self.bot.get_module("db_sqlite")
+        db_sqlite: DBSQLite = self.bot.get_module("modules.core.db_sqlite")
         self.connection = db_sqlite.connection
 
         cur: Cursor = await self.connection.cursor()

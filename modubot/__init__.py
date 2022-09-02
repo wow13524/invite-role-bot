@@ -1,3 +1,8 @@
-from .bot import *
-from .config import *
-from .module_base import *
+from .bot import Bot,ModuleBase
+from .config import Config
+
+__all__ = [
+    "Bot",
+    "Config",
+    "ModuleBase"
+]

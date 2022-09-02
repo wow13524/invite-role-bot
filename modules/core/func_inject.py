@@ -8,17 +8,15 @@ if TYPE_CHECKING:
 Callback = Callable[...,Awaitable[None]]
 
 class Module(ModuleBase):
-    name = "func_inject"
-
-    def __init__(self,bot: 'Bot'):
+    def __init__(self,bot: 'Bot') -> None:
         self.bot: Bot = bot
         self.groups: Dict[str,List[Callback]] = {}
 
-    def inject(self,callback: Callback):
+    def inject(self,callback: Callback) -> None:
         callback_name: str = callback.__name__
         if callback_name not in self.groups:
             self.groups[callback_name] = []
-            predefined = False
+            predefined: bool = False
             try:
                 predefined = getattr(self.bot,callback_name)
             except:

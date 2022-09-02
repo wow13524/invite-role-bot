@@ -7,18 +7,16 @@ if TYPE_CHECKING:
     from func_inject import Module as FuncInject
 
 class Module(ModuleBase):
-    name = "slash_commands"
-
-    def __init__(self,bot: 'Bot'):
+    def __init__(self,bot: 'Bot') -> None:
         self.bot: Bot = bot
         self._cmds_synced: bool = False
         self.cmd_tree: CommandTree[Bot]
     
-    async def init(self):
+    async def init(self) -> None:
         self.cmd_tree = CommandTree(self.bot)
     
-    async def postinit(self):
-        func_inject: FuncInject = self.bot.get_module("func_inject")
+    async def postinit(self) -> None:
+        func_inject: FuncInject = self.bot.get_module("modules.core.func_inject")
         func_inject.inject(self.on_ready)
     
     async def on_ready(self):
