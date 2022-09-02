@@ -1,1 +1,1 @@
-../discord-modubot/modules/__init__.py
+from . import *
