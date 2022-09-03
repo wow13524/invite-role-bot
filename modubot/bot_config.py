@@ -1,7 +1,7 @@
-from .config import Config
+from .config import PropertyDict
 from typing import Dict,List
 
-class BotConfig(Config):
-    intents: Dict[str,bool]
-    enabled_modules: List[str]
-    token: str
+class BotConfig(PropertyDict):
+    intents: Dict[str,bool] = {}
+    enabled_modules: List[str] = ["modules.core"]
+    token: str = ""

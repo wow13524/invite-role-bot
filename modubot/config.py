@@ -4,46 +4,72 @@
 import json
 from os import path
 from typeguard import check_type
-from typing import Any,Dict,Generator,Tuple,Union,get_origin,get_type_hints
+from typing import Any,List,Dict,Generator,Literal,Optional,Tuple,Type,TypeVar,Union,get_origin,get_type_hints
 
-class Config:
+T = TypeVar("T",bound="PropertyDict")
+
+class TypedProperties:
+    def __init__(self):
+        self.types: Dict[str,type] = get_type_hints(self)
+    
+    def __iter__(self) -> Generator[Tuple[str,Any],None,None]:
+        for attr in self.types:
+            value: Any = getattr(self,attr)
+            if isinstance(value,TypedProperties):
+                value = dict(value)
+            yield attr, value
+
+class PropertyDict(TypedProperties):
+    def __init__(self,data: Dict[str,Any]={},path: str="internal",missing_fields: List[str]=[]) -> None:
+        super().__init__()
+        missing_fields += [field for field in self.types if field not in data]
+
+        for attr,tp in self.types.items():
+            subpath: str = f"{path}.{attr}"
+            value: Any = getattr(self.__class__,attr) if attr not in data else data[attr]
+            if isinstance(value,PropertyDict):
+                value = dict(value)
+            origin: Optional[type] = get_origin(tp)
+            if origin == list or origin == dict:
+                value = value.copy()
+            elif origin == Literal:
+                pass
+            elif issubclass(tp,PropertyDict):
+                value = tp(value,subpath)
+            check_type(subpath,value,tp)
+            setattr(self,attr,value)
+
+class Config(TypedProperties):
     def __init__(self,config_path: Union[str,'Config']) -> None:
+        self.types: Dict[str,type] = {}
         self.path: str = config_path if isinstance(config_path,str) else config_path.path
         self.exists: bool = path.exists(self.path)
-        self.types: Dict[str,Any] = get_type_hints(self)
 
+    def get(self,config_type: Type[T]) -> T:
+        config_name: str = config_type.__name__
+        if hasattr(self,config_name):
+            return getattr(self,config_name)
+        data: Dict[str,Any] = {}
         if self.exists:
             with open(self.path) as f:
-                self._load(json.load(f))
-        else:
-            self._load({})
+                config: Dict[str,Any] = json.load(f)
+                if config_name in config:
+                    data = config[config_name]
+        missing_fields: List[str] = []
+        self.types[config_name] = config_type
+        properties: T = config_type(data,self.__class__.__name__,missing_fields)
+        setattr(self,config_name,properties)
+        if missing_fields:
             self.save()
-            raise Exception(f"config does not exist, new one created at '{config_path}'")
-    
-    def _load(self,data: Dict[str,Any]) -> None:
-        needs_saving: bool = False
-        for attr,t in self.types.items():
-            value: Any
-            if attr not in data:
-                print(f"field '{attr}' missing from config, adding")
-                value = (get_origin(t) or t)()
-                needs_saving = True
-            else:
-                value = data[attr]
-                check_type(f"Config.{attr}",value,t)
-            setattr(self,attr,value)
-        if needs_saving:
-            self.save()
+        return properties
     
     def save(self) -> None:
-        output: Dict[str,Any] = dict(self)
+        output: Dict[str,Any] = {}
         if self.exists:
             with open(self.path) as f:
                 content: str = f.read()
                 output.update(json.loads(content))
+        output.update(dict(self))
         with open(self.path,"w+") as f:
             json.dump(output,f,indent=4)
-    
-    def __iter__(self) -> Generator[Tuple[str,Any],None,None]:
-        for attr in self.types:
-            yield attr, getattr(self,attr)
+        self.exists = True

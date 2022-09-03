@@ -1,8 +1,8 @@
 from .bot import Bot,ModuleBase
-from .config import Config
+from .config import PropertyDict
 
 __all__ = [
     "Bot",
-    "Config",
-    "ModuleBase"
+    "ModuleBase",
+    "PropertyDict"
 ]

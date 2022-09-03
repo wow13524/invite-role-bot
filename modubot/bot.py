@@ -2,6 +2,7 @@ import discord
 import importlib
 import os
 from .bot_config import BotConfig
+from .config import Config
 from types import ModuleType
 from typing import Any,Dict,List,Optional,Type
 
@@ -28,18 +29,19 @@ class ModuleBase:
 class Bot(discord.AutoShardedClient):
     def __init__(self,work_dir: str = os.getcwd(),config_name: str=DEFAULT_CONFIG_NAME):
         self.work_dir: str = work_dir
-        self.config: BotConfig = BotConfig(config_path=os.path.join(work_dir,config_name))
+        self.config: Config = Config(config_path=os.path.join(work_dir,config_name))
+        self._bot_config: BotConfig = self.config.get(BotConfig)
         self.loaded_modules: Dict[str,ModuleBase] = self._preload_modules()
 
         intents: discord.Intents = discord.Intents.default()
-        for intent,value in self.config.intents.items():
+        for intent,value in self._bot_config.intents.items():
             assert hasattr(intents,intent), f"invalid intent '{intent}' present in config"
             setattr(intents,intent,bool(value))
         super().__init__(intents=intents)
     
     def _preload_modules(self) -> Dict[str,ModuleBase]:
         loaded_modules: Dict[str,ModuleBase] = {}
-        for module_path in self.config.enabled_modules:
+        for module_path in self._bot_config.enabled_modules:
             for module in import_recursive(importlib.import_module(module_path)):
                 module_name: str = module.__name__
                 assert hasattr(module,"Module"), f"'{module_name}' is not a valid module"
@@ -63,5 +65,5 @@ class Bot(discord.AutoShardedClient):
         await super().start(token,reconnect=reconnect)
     
     def run(self,token: Optional[str]=None,**_: Any) -> None:
-        assert self.config.token, "token missing from config"
-        super().run(token or self.config.token)
+        assert self._bot_config.token, "token missing from config"
+        super().run(token or self._bot_config.token)

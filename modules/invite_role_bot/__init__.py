@@ -1,6 +1,6 @@
-from . import irb_commands,irb_data_persistence
+from . import commands,persistence_layer
 
 __all__ = [
-    "irb_commands",
-    "irb_data_persistence"
+    "commands",
+    "persistence_layer"
 ]
