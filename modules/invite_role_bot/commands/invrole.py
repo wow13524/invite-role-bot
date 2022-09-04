@@ -76,7 +76,7 @@ class Module(ModuleBase):
             guild: Optional[Guild] = interaction.guild
             invites: List[str] = []
             if guild:
-                invites = await persistence_layer.get_invite_ids(guild)
+                invites = await persistence_layer.get_invite_codes(guild)
             return [Choice(name=invite_url,value=invite_url) for invite_url in map(lambda x: f"https://discord.gg/{x}",invites) if current.lower() in invite_url.lower()]
 
         @invrole_group.command(name="list",description="Lists all invite-role connections.")
@@ -87,6 +87,6 @@ class Module(ModuleBase):
             for invite in invites:
                 invite_roles: List[Role] = await persistence_layer.get_invite_roles(invite)
                 response += f"<https://discord.gg/{invite.code}>: {' '.join(role.mention for role in invite_roles)}\n"
-            await interaction.response.send_message(response)
+            await interaction.response.send_message(response or "No invite-roles connected.")
         
         cmd_tree.add_command(invrole_group)
