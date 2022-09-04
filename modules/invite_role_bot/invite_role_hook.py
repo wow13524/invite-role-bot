@@ -1,15 +1,11 @@
-from discord import Forbidden,Guild,Invite,Object,Member,PartialInviteChannel,PartialInviteGuild
-from discord.abc import GuildChannel
+from discord import Forbidden,Guild,Invite,Member
 from modubot import ModuleBase
-from typing import List,Optional,TYPE_CHECKING,Union
+from typing import List,Optional,TYPE_CHECKING
 
 if TYPE_CHECKING:
     from modubot import Bot
     from .persistence_layer import Module as PersistenceLayer
     from ..core.func_inject import Module as FuncInject
-
-InviteChannel = Optional[Union[GuildChannel,Object,PartialInviteChannel]]
-InviteGuild = Optional[Union[Guild,Object,PartialInviteGuild]]
 
 class Module(ModuleBase):
     def __init__(self,bot: 'Bot') -> None:
