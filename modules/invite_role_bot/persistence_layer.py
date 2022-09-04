@@ -43,7 +43,9 @@ class Module(ModuleBase):
             """
             CREATE TABLE IF NOT EXISTS roles (
                 id integer NOT NULL,
+                guild_id integer NOT NULL,
                 invite_id varchar(32) NOT NULL,
+                FOREIGN KEY (guild_id) REFERENCES guilds (id),
                 FOREIGN KEY (invite_id) REFERENCES invites (id)
             );
             """
@@ -81,6 +83,10 @@ class Module(ModuleBase):
     async def get_invite_ids(self,guild: Guild) -> List[str]:
         cur: Cursor = await self.connection.cursor()
         return [str(x[0]) for x in await (await cur.execute("SELECT id FROM invites WHERE guild_id = ?;",[guild.id])).fetchall()]
+    
+    async def guild_exists(self,guild: Guild) -> bool:
+        cur: Cursor = await self.connection.cursor()
+        return await (await cur.execute("SELECT 1 FROM guilds WHERE id = ?;",[guild.id])).fetchone() is not None
 
     async def invite_exists(self,invite: Invite) -> bool:
         cur: Cursor = await self.connection.cursor()
@@ -94,10 +100,13 @@ class Module(ModuleBase):
             return await self.invite_exists(invite)
 
     async def add_invite_role(self,invite: Invite,role: Role) -> None:
+        guild: InviteGuild = invite.guild
+        if not isinstance(guild,Guild):
+            return
         await self._add_invite(invite)
         cur: Cursor = await self.connection.cursor()
         if not self.invite_role_exists(invite,role):
-            await cur.execute("INSERT INTO roles (id,invite_id) VALUES (?,?);",[role.id,invite.code])
+            await cur.execute("INSERT INTO roles (id,guild_id,invite_id) VALUES (?,?,?);",[role.id,guild.id,invite.code])
         await self.connection.commit()
     
     async def remove_invite_role(self,invite: Invite,role: Optional[Role]) -> None:
