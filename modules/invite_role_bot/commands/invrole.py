@@ -43,7 +43,7 @@ class Module(ModuleBase):
                     await interaction.response.send_message("I don't have permission to assign roles.")
                 elif not role.position or bot_role < role:
                     await interaction.response.send_message("I'm unable to assign this role.")
-                elif persistence_layer.invite_role_exists(invite,role):
+                elif await persistence_layer.invite_role_exists(invite,role):
                     await interaction.response.send_message("This invite and role is already connected.")
                 else:
                     await persistence_layer.add_invite_role(invite,role)

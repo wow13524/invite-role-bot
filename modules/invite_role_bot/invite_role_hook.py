@@ -1,5 +1,4 @@
-from aiosqlite import Cursor
-from discord import Guild,Invite,Object,PartialInviteChannel,PartialInviteGuild,Role
+from discord import Guild,Invite,Object,Member,PartialInviteChannel,PartialInviteGuild
 from discord.abc import GuildChannel
 from modubot import ModuleBase
 from typing import List,Optional,TYPE_CHECKING,Union
@@ -7,6 +6,7 @@ from typing import List,Optional,TYPE_CHECKING,Union
 if TYPE_CHECKING:
     from modubot import Bot
     from .persistence_layer import Module as PersistenceLayer
+    from ..core.func_inject import Module as FuncInject
 
 InviteChannel = Optional[Union[GuildChannel,Object,PartialInviteChannel]]
 InviteGuild = Optional[Union[Guild,Object,PartialInviteGuild]]
@@ -17,9 +17,18 @@ class Module(ModuleBase):
         self.persistence_layer: PersistenceLayer
     
     async def postinit(self) -> None:
+        func_inject: FuncInject = self.bot.get_module("modules.core.func_inject")
         self.persistence_layer = self.bot.get_module("modules.invite_role_bot.persistence_layer")
+
+        func_inject.inject(self.on_ready)
+        func_inject.inject(self.on_member_join)
     
     async def on_ready(self) -> None:
         for guild in self.bot.guilds:
-            if await self.persistence_layer.guild_exists(guild):
-                guild_invites: List[Invite] = await guild.invites()
+            await self.persistence_layer.update_invite_uses(guild)
+    
+    async def on_member_join(self,member: Member) -> None:
+        used_invites: List[Invite] = await self.persistence_layer.update_invite_uses(member.guild)
+        assert len(used_invites) == 1, "Other invites used before join"
+        used_invite: Invite = used_invites[0]
+        await member.add_roles(*await self.persistence_layer.get_invite_roles(used_invite),reason=f"Invite-roles for {used_invite.code}")
