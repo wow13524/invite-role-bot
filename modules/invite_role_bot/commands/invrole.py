@@ -44,7 +44,7 @@ class Module(ModuleBase):
                 elif not role.position or bot_role < role:
                     await interaction.response.send_message("I'm unable to assign this role.")
                 elif await persistence_layer.invite_role_exists(invite,role):
-                    await interaction.response.send_message("This invite and role is already connected.")
+                    await interaction.response.send_message("This invite and role are already connected.")
                 else:
                     await persistence_layer.add_invite_role(invite,role)
                     await interaction.response.send_message("Connected!")
@@ -78,5 +78,15 @@ class Module(ModuleBase):
             if guild:
                 invites = await persistence_layer.get_invite_ids(guild)
             return [Choice(name=invite_url,value=invite_url) for invite_url in map(lambda x: f"https://discord.gg/{x}",invites) if current.lower() in invite_url.lower()]
+
+        @invrole_group.command(name="list",description="Lists all invite-role connections.")
+        async def list(interaction: Interaction):
+            assert interaction.guild
+            invites: List[Invite] = await persistence_layer.get_invites(interaction.guild)
+            response: str = ""
+            for invite in invites:
+                invite_roles: List[Role] = await persistence_layer.get_invite_roles(invite)
+                response += f"<https://discord.gg/{invite.code}>: {' '.join(role.mention for role in invite_roles)}\n"
+            await interaction.response.send_message(response)
         
         cmd_tree.add_command(invrole_group)

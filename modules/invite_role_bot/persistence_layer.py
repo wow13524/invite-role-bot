@@ -78,8 +78,8 @@ class Module(ModuleBase):
     async def _add_invite(self,invite: Invite) -> None:
         channel: InviteChannel = invite.channel
         guild: InviteGuild = invite.guild
-        if not isinstance(channel,GuildChannel) or not isinstance(guild,Guild):
-            return
+        assert isinstance(channel,GuildChannel)
+        assert isinstance(guild,Guild)
         await self._add_guild(guild)
         cur: Cursor = await self.connection.cursor()
         if not await self.invite_exists(invite):
@@ -87,8 +87,7 @@ class Module(ModuleBase):
     
     async def _remove_invite_if_unused(self,invite: Invite) -> None:
         guild: InviteGuild = invite.guild
-        if not isinstance(guild,Guild):
-            return
+        assert isinstance(guild,Guild)
         cur: Cursor = await self.connection.cursor()
         if not await (await cur.execute("SELECT 1 FROM roles WHERE invite_id = ?;",[invite.code])).fetchone():
             await cur.execute("DELETE FROM invites WHERE id = ?;",[invite.code])
@@ -98,12 +97,20 @@ class Module(ModuleBase):
         cur: Cursor = await self.connection.cursor()
         return [str(x[0]) for x in await (await cur.execute("SELECT id FROM invites WHERE guild_id = ?;",[guild.id])).fetchall()]
     
+    async def get_invites(self,guild: Guild) -> List[Invite]:
+        invite_ids: List[str] = await self.get_invite_ids(guild)
+        return [invite for invite in await guild.invites() if invite.code in invite_ids]
+    
+    async def get_invite_role_ids(self,invite: Invite) -> List[int]:
+        guild: InviteGuild = invite.guild
+        assert isinstance(guild,Guild)
+        cur: Cursor = await self.connection.cursor()
+        return [x[0] for x in await (await cur.execute("SELECT id FROM roles WHERE invite_id = ?;",[invite.code])).fetchall()]
+    
     async def get_invite_roles(self,invite: Invite) -> List[Role]:
         guild: InviteGuild = invite.guild
-        if not isinstance(guild,Guild):
-            return []
-        cur: Cursor = await self.connection.cursor()
-        invite_role_ids: List[int] = [x[0] for x in await (await cur.execute("SELECT id FROM roles WHERE invite_id = ?;",[invite.code])).fetchall()]
+        assert isinstance(guild,Guild)
+        invite_role_ids: List[int] = await self.get_invite_role_ids(invite)
         return [role for role in guild.roles if role.id in invite_role_ids]
     
     async def update_invite_uses(self,guild: Guild) -> List[Invite]:
