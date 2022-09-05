@@ -26,7 +26,7 @@ class Module(ModuleBase):
         cmd_tree: CommandTree[Bot] = slash_commands.cmd_tree
 
         invrole_group: Group = Group(name="invrole",description="Manage invite-role connections within this guild.",guild_only=True)
-
+        
         @invrole_group.command(name="connect",description="Connects an invite to a role.")
         @describe(invite_url="The URL of the invite to link a role to.",role="The role to assign when the invite is used.")
         async def connect(interaction: Interaction,invite_url: str,role: Role):

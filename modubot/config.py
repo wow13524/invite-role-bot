@@ -20,7 +20,7 @@ class TypedProperties:
             yield attr, value
 
 class PropertyDict(TypedProperties):
-    def __init__(self,data: Dict[str,Any]={},path: str="internal",missing_fields: List[str]=[]) -> None:
+    def __init__(self,missing_fields: List[str],data: Dict[str,Any],path: str) -> None:
         super().__init__()
         missing_fields += [field for field in self.types if field not in data]
 
@@ -35,7 +35,7 @@ class PropertyDict(TypedProperties):
             elif origin == Literal:
                 pass
             elif issubclass(tp,PropertyDict):
-                value = tp(value,subpath)
+                value = tp(missing_fields,value,subpath)
             check_type(subpath,value,tp)
             setattr(self,attr,value)
 
@@ -57,13 +57,13 @@ class Config(TypedProperties):
                     data = config[config_name]
         missing_fields: List[str] = []
         self.types[config_name] = config_type
-        properties: T = config_type(data,self.__class__.__name__,missing_fields)
+        properties: T = config_type(missing_fields,data,self.__class__.__name__)
         setattr(self,config_name,properties)
         if missing_fields:
-            self.save()
+            self._save()
         return properties
     
-    def save(self) -> None:
+    def _save(self) -> None:
         output: Dict[str,Any] = {}
         if self.exists:
             with open(self.path) as f:

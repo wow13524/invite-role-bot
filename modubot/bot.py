@@ -8,7 +8,7 @@ from typing import Any,Dict,List,Optional,Type
 
 DEFAULT_CONFIG_NAME = "config.json"
 
-def import_recursive(module: ModuleType,out: List[ModuleType]=[]):
+def import_recursive(module: ModuleType,out: List[ModuleType]) -> List[ModuleType]:
     if hasattr(module,"__all__"):
         for module_name in getattr(module,"__all__"):
             import_recursive(getattr(module,module_name),out)
@@ -42,7 +42,9 @@ class Bot(discord.AutoShardedClient):
     def _preload_modules(self) -> Dict[str,ModuleBase]:
         loaded_modules: Dict[str,ModuleBase] = {}
         for module_path in self._bot_config.enabled_modules:
-            for module in import_recursive(importlib.import_module(module_path)):
+            module_path_recursive: List[ModuleType] = []
+            import_recursive(importlib.import_module(module_path),module_path_recursive)
+            for module in module_path_recursive:
                 module_name: str = module.__name__
                 assert hasattr(module,"Module"), f"'{module_name}' is not a valid module"
                 module_class: Type[ModuleBase] = getattr(module,"Module")

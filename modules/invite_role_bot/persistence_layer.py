@@ -34,7 +34,6 @@ class Module(ModuleBase):
             CREATE TABLE IF NOT EXISTS invites (
                 code varchar(32) PRIMARY KEY,
                 uses integer NOT NULL,
-                channel_id integer NOT NULL,
                 guild_id integer NOT NULL,
                 FOREIGN KEY (guild_id) REFERENCES guilds (id)
             );
@@ -83,7 +82,7 @@ class Module(ModuleBase):
         await self._add_guild(guild)
         cur: Cursor = await self.connection.cursor()
         if not await self.invite_exists(invite):
-            await cur.execute("INSERT INTO invites (code,uses,channel_id,guild_id) VALUES (?,?,?,?);",[invite.code,invite.uses or 0,channel.id,guild.id])
+            await cur.execute("INSERT INTO invites (code,uses,guild_id) VALUES (?,?,?);",[invite.code,invite.uses or 0,guild.id])
     
     async def _remove_invite_if_unused(self,invite: Invite) -> None:
         guild: InviteGuild = invite.guild
@@ -124,7 +123,7 @@ class Module(ModuleBase):
                     uses = ?
                 WHERE code = ?
                 """,
-                [invite.uses,invite.code]
+                [invite.uses or 0,invite.code]
             )
         return used_invites
 

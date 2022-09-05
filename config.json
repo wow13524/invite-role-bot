@@ -1,0 +1,18 @@
+{
+    "BotConfig": {
+        "intents": {
+            "members": true
+        },
+        "enabled_modules": [
+            "modules.core",
+            "modules.invite_role_bot",
+            "modules.persistence"
+        ],
+        "token": ""
+    },
+    "PersistenceConfig": {
+        "db_name": "data.db",
+        "auto_vacuum": "FULL",
+        "write_ahead_logging": true
+    }
+}
