@@ -5,6 +5,7 @@ from discord.app_commands import Choice,CommandTree,describe,Group
 from discord.errors import NotFound
 from modubot import ModuleBase
 from typing import List,Optional,TYPE_CHECKING
+from ..responses import *
 if TYPE_CHECKING:
     from modubot import Bot
     from ..persistence_layer import Module as PersistenceLayer
@@ -35,19 +36,19 @@ class Module(ModuleBase):
             try:
                 invite: Invite = await self.bot.fetch_invite(invite_url)
             except NotFound:
-                await interaction.response.send_message("Invite not found.")
+                await interaction.response.send_message(embed=error_response.embed(interaction,"Invite not found."))
             else:
                 if invite.guild != interaction.guild:
-                    await interaction.response.send_message("Invite does not belong to this guild.")
+                    await interaction.response.send_message(embed=error_response.embed(interaction,"Invite does not belong to this guild."))
                 elif not bot_role:
-                    await interaction.response.send_message("I don't have permission to assign roles.")
-                elif not role.position or bot_role < role:
-                    await interaction.response.send_message("I'm unable to assign this role.")
+                    await interaction.response.send_message(embed=error_response.embed(interaction,"I don't have permission to assign roles."))
+                elif not role.position or bot_role <= role:
+                    await interaction.response.send_message(embed=error_response.embed(interaction,"I'm unable to assign this role."))
                 elif await persistence_layer.invite_role_exists(invite,role):
-                    await interaction.response.send_message("This invite and role are already connected.")
+                    await interaction.response.send_message(embed=error_response.embed(interaction,"This invite and role are already connected."))
                 else:
                     await persistence_layer.add_invite_role(invite,role)
-                    await interaction.response.send_message("Connected!")
+                    await interaction.response.send_message(embed=success_response.embed(interaction,"Connected!"))
         
         @connect.autocomplete("invite_url")
         async def connect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
@@ -63,13 +64,13 @@ class Module(ModuleBase):
             try:
                 invite: Invite = await self.bot.fetch_invite(invite_url)
             except NotFound:
-                await interaction.response.send_message("Invite not found.")
+                await interaction.response.send_message(embed=error_response.embed(interaction,"Invite not found."))
             else:
                 if not await persistence_layer.invite_role_exists(invite,role):
-                    await interaction.response.send_message("No connection exists.")
+                    await interaction.response.send_message(embed=error_response.embed(interaction,"No connection exists."))
                 else:
                     await persistence_layer.remove_invite_role(invite,role)
-                    await interaction.response.send_message("Disconnected!")
+                    await interaction.response.send_message(embed=success_response.embed(interaction,"Disconnected!"))
         
         @disconnect.autocomplete("invite_url")
         async def disconnect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
