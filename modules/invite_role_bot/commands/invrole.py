@@ -1,6 +1,6 @@
 # pyright: reportUnusedFunction=false
 
-from discord import Guild,Interaction,Invite,Member,Permissions,Role
+from discord import Embed,Guild,Interaction,Invite,Member,Permissions,Role
 from discord.app_commands import Choice,CommandTree,describe,Group
 from discord.errors import NotFound
 from modubot import ModuleBase
@@ -27,24 +27,27 @@ class Module(ModuleBase):
         async def connect(interaction: Interaction,invite_url: str,role: Role):
             assert interaction.guild
             assert isinstance(interaction.user,Member)
+            response_embed: Optional[Embed] = None
             try:
                 invite: Invite = await self.bot.fetch_invite(invite_url)
             except NotFound:
-                await interaction.response.send_message(embed=error_response.embed(interaction,"Invite not found."))
+                response_embed = invalid_invite_response.embed(interaction,invite_url)
             else:
                 if invite.guild != interaction.guild:
-                    await interaction.response.send_message(embed=error_response.embed(interaction,"Invite does not belong to this guild."))
-                elif not interaction.guild.me.guild_permissions.manage_guild:
-                    await interaction.response.send_message(embed=error_response.embed(interaction,"I don't have permission to assign roles."))
+                    response_embed = wrong_guild_response.embed(interaction,invite_url)
+                elif not interaction.guild.me.guild_permissions.manage_roles:
+                    response_embed = manage_roles_response.embed(interaction)
                 elif interaction.user != interaction.guild.owner and interaction.user.top_role <= role:
-                    await interaction.response.send_message(embed=error_response.embed(interaction,"You do not have permission to assign this role."))
+                    response_embed = error_response.embed(interaction,"You do not have permission to assign this role.")
                 elif role.position == 0 or interaction.guild.me.top_role <= role:
-                    await interaction.response.send_message(embed=error_response.embed(interaction,"I'm unable to assign this role."))
+                    response_embed = error_response.embed(interaction,"I'm unable to assign this role.")
                 elif await persistence_layer.invite_role_exists(invite,role):
-                    await interaction.response.send_message(embed=error_response.embed(interaction,"This invite and role are already connected."))
+                    response_embed = error_response.embed(interaction,"This invite and role are already connected.")
                 else:
                     await persistence_layer.add_invite_role(invite,role)
-                    await interaction.response.send_message(embed=success_response.embed(interaction,"Connected!"))
+                    response_embed = success_response.embed(interaction,"Connected!")
+            if response_embed:
+                await interaction.response.send_message(embed=response_embed,ephemeral=True)
         
         @connect.autocomplete("invite_url")
         async def connect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
@@ -60,7 +63,7 @@ class Module(ModuleBase):
             try:
                 invite: Invite = await self.bot.fetch_invite(invite_url)
             except NotFound:
-                await interaction.response.send_message(embed=error_response.embed(interaction,"Invite not found."))
+                await interaction.response.send_message(embed=invalid_invite_response.embed(interaction,invite_url))
             else:
                 if not await persistence_layer.invite_role_exists(invite,role):
                     await interaction.response.send_message(embed=error_response.embed(interaction,"No connection exists."))
@@ -84,6 +87,6 @@ class Module(ModuleBase):
             for invite in invites:
                 invite_roles: List[Role] = await persistence_layer.get_invite_roles(invite)
                 response += f"<https://discord.gg/{invite.code}>: {' '.join(role.mention for role in invite_roles)}\n"
-            await interaction.response.send_message(response or "No invite-roles connected.")
+            await interaction.response.send_message(response or "No invite-roles connected.",ephemeral=True)
         
         cmd_tree.add_command(invrole_group)
