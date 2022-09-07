@@ -123,19 +123,18 @@ class Module(ModuleBase):
     async def update_invite_uses(self,guild: Guild) -> List[Invite]:
         used_invites: List[Invite] = []
         cur: Cursor = await self.connection.cursor()
-        if guild.me.guild_permissions.manage_guild:
-            for invite in await guild.invites():
-                saved_uses_row: Optional[Row] = await (await cur.execute("SELECT uses FROM invites WHERE code = ?;",[invite.code])).fetchone()
-                if saved_uses_row and invite.uses != saved_uses_row[0]:
-                    used_invites.append(invite)
-                await cur.execute(
-                    """
-                    UPDATE invites SET
-                        uses = ?
-                    WHERE code = ?
-                    """,
-                    [invite.uses or 0,invite.code]
-                )
+        for invite in await self.get_invites(guild):
+            saved_uses_row: Optional[Row] = await (await cur.execute("SELECT uses FROM invites WHERE code = ?;",[invite.code])).fetchone()
+            if saved_uses_row and invite.uses != saved_uses_row[0]:
+                used_invites.append(invite)
+            await cur.execute(
+                """
+                UPDATE invites SET
+                    uses = ?
+                WHERE code = ?
+                """,
+                [invite.uses or 0,invite.code]
+            )
         return used_invites
 
     async def add_invite_role(self,invite: Invite,role: Role) -> None:
