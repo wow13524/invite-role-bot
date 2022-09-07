@@ -2,6 +2,7 @@ from sqlite3 import Row
 from aiosqlite import Connection,Cursor
 from discord import Guild,Invite,Object,PartialInviteChannel,PartialInviteGuild,Role
 from discord.abc import GuildChannel
+from discord.errors import NotFound
 from modubot import ModuleBase
 from typing import List,Optional,TYPE_CHECKING,Union
 
@@ -98,7 +99,16 @@ class Module(ModuleBase):
     
     async def get_invites(self,guild: Guild) -> List[Invite]:
         invite_codes: List[str] = await self.get_invite_codes(guild)
-        return [invite for invite in await guild.invites() if invite.code in invite_codes]
+        if guild.me.guild_permissions.manage_guild:
+            return [invite for invite in await guild.invites() if invite.code in invite_codes]
+        else:   #Slower fallback to still serve invites even without manage_guild
+            invites: List[Invite] = []
+            for invite_code in invite_codes:
+                try:
+                    invites.append(await self.bot.fetch_invite(invite_code))
+                except NotFound:
+                    pass
+            return invites
     
     async def get_invite_role_ids(self,invite: Invite) -> List[int]:
         cur: Cursor = await self.connection.cursor()
@@ -113,18 +123,19 @@ class Module(ModuleBase):
     async def update_invite_uses(self,guild: Guild) -> List[Invite]:
         used_invites: List[Invite] = []
         cur: Cursor = await self.connection.cursor()
-        for invite in await guild.invites():
-            saved_uses_row: Optional[Row] = await (await cur.execute("SELECT uses FROM invites WHERE code = ?;",[invite.code])).fetchone()
-            if saved_uses_row and invite.uses != saved_uses_row[0]:
-                used_invites.append(invite)
-            await cur.execute(
-                """
-                UPDATE invites SET
-                    uses = ?
-                WHERE code = ?
-                """,
-                [invite.uses or 0,invite.code]
-            )
+        if guild.me.guild_permissions.manage_guild:
+            for invite in await guild.invites():
+                saved_uses_row: Optional[Row] = await (await cur.execute("SELECT uses FROM invites WHERE code = ?;",[invite.code])).fetchone()
+                if saved_uses_row and invite.uses != saved_uses_row[0]:
+                    used_invites.append(invite)
+                await cur.execute(
+                    """
+                    UPDATE invites SET
+                        uses = ?
+                    WHERE code = ?
+                    """,
+                    [invite.uses or 0,invite.code]
+                )
         return used_invites
 
     async def add_invite_role(self,invite: Invite,role: Role) -> None:

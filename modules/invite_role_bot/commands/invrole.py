@@ -11,6 +11,17 @@ if TYPE_CHECKING:
     from ..persistence_layer import Module as PersistenceLayer
     from ...core.slash_commands import Module as SlashCommands
 
+def permission_check(embed: Embed,permissions: Permissions) -> None:
+    if permissions.administrator:
+        return
+    if not (permissions.manage_guild and permissions.manage_roles):
+        missing_permissions: List[str] = []
+        if not permissions.manage_guild:
+            missing_permissions.append("**Manage Server**")
+        if not permissions.manage_roles:
+            missing_permissions.append("**Manage Roles**")
+        embed.description = f"🚨IMPORTANT🚨: I'm currently unable to track or assign invite-roles because I don't have the {' and '.join(missing_permissions)} permission{'s' if len(missing_permissions) > 1 else ''}!\n\n" + (embed.description or "")
+
 class Module(ModuleBase):
     def __init__(self,bot: 'Bot'):
         self.bot: Bot = bot
@@ -27,7 +38,8 @@ class Module(ModuleBase):
         async def connect(interaction: Interaction,invite_url: str,role: Role):
             assert interaction.guild
             assert isinstance(interaction.user,Member)
-            response_embed: Optional[Embed] = None
+            bot_guild_permissions: Permissions = interaction.guild.me.guild_permissions
+            response_embed: Embed
             try:
                 invite_url = f"https://discord.gg/{invite_url.split('/')[-1]}"
                 invite: Invite = await self.bot.fetch_invite(invite_url)
@@ -36,7 +48,7 @@ class Module(ModuleBase):
             else:
                 if invite.guild != interaction.guild:
                     response_embed = wrong_guild_response.embed(interaction,invite_url)
-                elif not interaction.guild.me.guild_permissions.manage_roles:
+                elif not (bot_guild_permissions.administrator or bot_guild_permissions.manage_roles):
                     response_embed = manage_roles_response.embed(interaction)
                 elif interaction.user != interaction.guild.owner and interaction.user.top_role <= role:
                     response_embed = invoker_hierarchy_response.embed(interaction,role)
@@ -49,21 +61,22 @@ class Module(ModuleBase):
                 else:
                     await persistence_layer.add_invite_role(invite,role)
                     response_embed = connected_response.embed(interaction,invite_url,role)
-            if response_embed:
-                await interaction.response.send_message(embed=response_embed,ephemeral=True)
+            permission_check(response_embed,bot_guild_permissions)
+            await interaction.response.send_message(embed=response_embed,ephemeral=True)
         
         @connect.autocomplete("invite_url")
         async def connect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
             guild: Optional[Guild] = interaction.guild
             invites: List[Invite] = []
-            if guild:
+            if guild and guild.me.guild_permissions.manage_guild:
                 invites = await guild.invites()
-            return [Choice(name=invite_url,value=invite_url) for invite_url in map(lambda x: f"https://discord.gg/{x.code}",invites) if current.lower() in invite_url.lower()]
+            return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()]
         
         @invrole_group.command(name="disconnect",description="Disconnects an invite from a role.")
         @describe(invite_url="The URL of the invite to disconnect a role from.",role="The role to disconnect from the invite.")
         async def disconnect(interaction: Interaction,invite_url: str,role: Optional[Role]):
-            response_embed: Optional[Embed] = None
+            assert interaction.guild
+            response_embed: Embed
             try:
                 invite_url = f"https://discord.gg/{invite_url.split('/')[-1]}"
                 invite: Invite = await self.bot.fetch_invite(invite_url)
@@ -75,16 +88,16 @@ class Module(ModuleBase):
                 else:
                     await persistence_layer.remove_invite_role(invite,role)
                     response_embed = disconnected_response.embed(interaction,invite_url,role)
-            if response_embed:
-                await interaction.response.send_message(embed=response_embed,ephemeral=True)
+            permission_check(response_embed,interaction.guild.me.guild_permissions)
+            await interaction.response.send_message(embed=response_embed,ephemeral=True)
         
         @disconnect.autocomplete("invite_url")
         async def disconnect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
             guild: Optional[Guild] = interaction.guild
-            invites: List[str] = []
+            invites: List[Invite] = []
             if guild:
-                invites = await persistence_layer.get_invite_codes(guild)
-            return [Choice(name=invite_url,value=invite_url) for invite_url in map(lambda x: f"https://discord.gg/{x}",invites) if current.lower() in invite_url.lower()]
+                invites = await persistence_layer.get_invites(guild)
+            return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()]
 
         @invrole_group.command(name="list",description="Lists all invite-role connections.")
         async def list(interaction: Interaction):

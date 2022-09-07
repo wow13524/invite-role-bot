@@ -1,5 +1,7 @@
 test_config.json
-data.db
+*.db
+*.db-shm
+*.db-wal
 test.py
 
 # Byte-compiled / optimized / DLL files
