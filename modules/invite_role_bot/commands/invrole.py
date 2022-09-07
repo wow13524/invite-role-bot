@@ -29,6 +29,7 @@ class Module(ModuleBase):
             assert isinstance(interaction.user,Member)
             response_embed: Optional[Embed] = None
             try:
+                invite_url = f"https://discord.gg/{invite_url.split('/')[-1]}"
                 invite: Invite = await self.bot.fetch_invite(invite_url)
             except NotFound:
                 response_embed = invalid_invite_response.embed(interaction,invite_url)
@@ -38,14 +39,16 @@ class Module(ModuleBase):
                 elif not interaction.guild.me.guild_permissions.manage_roles:
                     response_embed = manage_roles_response.embed(interaction)
                 elif interaction.user != interaction.guild.owner and interaction.user.top_role <= role:
-                    response_embed = error_response.embed(interaction,"You do not have permission to assign this role.")
-                elif role.position == 0 or interaction.guild.me.top_role <= role:
-                    response_embed = error_response.embed(interaction,"I'm unable to assign this role.")
+                    response_embed = invoker_hierarchy_response.embed(interaction,role)
+                elif role.position == 0 or role.is_bot_managed():
+                    response_embed = cannot_assign_response.embed(interaction,role)
+                elif interaction.guild.me.top_role <= role:
+                    response_embed = bot_hierarchy_response.embed(interaction,role)
                 elif await persistence_layer.invite_role_exists(invite,role):
-                    response_embed = error_response.embed(interaction,"This invite and role are already connected.")
+                    response_embed = already_connected_response.embed(interaction,invite_url,role)
                 else:
                     await persistence_layer.add_invite_role(invite,role)
-                    response_embed = success_response.embed(interaction,"Connected!")
+                    response_embed = connected_response.embed(interaction,invite_url,role)
             if response_embed:
                 await interaction.response.send_message(embed=response_embed,ephemeral=True)
         
@@ -60,16 +63,20 @@ class Module(ModuleBase):
         @invrole_group.command(name="disconnect",description="Disconnects an invite from a role.")
         @describe(invite_url="The URL of the invite to disconnect a role from.",role="The role to disconnect from the invite.")
         async def disconnect(interaction: Interaction,invite_url: str,role: Optional[Role]):
+            response_embed: Optional[Embed] = None
             try:
+                invite_url = f"https://discord.gg/{invite_url.split('/')[-1]}"
                 invite: Invite = await self.bot.fetch_invite(invite_url)
             except NotFound:
-                await interaction.response.send_message(embed=invalid_invite_response.embed(interaction,invite_url))
+                response_embed = invalid_invite_response.embed(interaction,invite_url)
             else:
                 if not await persistence_layer.invite_role_exists(invite,role):
-                    await interaction.response.send_message(embed=error_response.embed(interaction,"No connection exists."))
+                    response_embed = not_connected_response.embed(interaction,invite_url,role)
                 else:
                     await persistence_layer.remove_invite_role(invite,role)
-                    await interaction.response.send_message(embed=success_response.embed(interaction,"Disconnected!"))
+                    response_embed = disconnected_response.embed(interaction,invite_url,role)
+            if response_embed:
+                await interaction.response.send_message(embed=response_embed,ephemeral=True)
         
         @disconnect.autocomplete("invite_url")
         async def disconnect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
