@@ -40,6 +40,7 @@ class PaginationView(View):
         self._embed.clear_fields()
         for field in self._fields[page]:
             self._embed.add_field(**field)
+        self._embed.add_field(name="‍",value="‍",inline=False)  #bottom padding
         self._embed.set_footer(text=f"Page {self.page+1} of {len(self._fields)}")
         self._update_buttons()
 

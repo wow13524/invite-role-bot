@@ -6,7 +6,7 @@ def embed(interaction: Interaction,err_msg: str) -> Embed:
         base_response.embed(interaction)
         .set_footer(text="Oops, something went wrong!")
     )
-    embed.color = Color.red()
+    embed.color = Color.brand_red()
     embed.title = "Error!"
     embed.description = err_msg
     return embed

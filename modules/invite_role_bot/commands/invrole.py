@@ -77,6 +77,7 @@ class Module(ModuleBase):
         async def disconnect(interaction: Interaction,invite_url: str,role: Optional[Role]):
             assert interaction.guild
             response_embed: Embed
+            response_view: Optional[View] = None
             try:
                 invite_url = f"https://discord.gg/{invite_url.split('/')[-1]}"
                 invite: Invite = await self.bot.fetch_invite(invite_url)
@@ -86,10 +87,18 @@ class Module(ModuleBase):
                 if not await persistence_layer.invite_role_exists(invite,role):
                     response_embed = not_connected_response.embed(interaction,invite_url,role)
                 else:
-                    await persistence_layer.remove_invite_role(invite,role)
-                    response_embed = disconnected_response.embed(interaction,invite_url,role)
+                    async def remove_invite_role(interaction: Interaction) -> Embed:
+                        await persistence_layer.remove_invite_role(invite,role)
+                        return disconnected_response.embed(interaction,invite_url,role)
+                    if role:
+                        response_embed = await remove_invite_role(interaction)
+                    else:
+                        response_embed,response_view = disconnect_confirm_response.embed(interaction,invite_url,len(await persistence_layer.get_invite_role_ids(invite)),remove_invite_role)
             permission_check(response_embed,interaction.guild.me.guild_permissions)
-            await interaction.response.send_message(embed=response_embed,ephemeral=True)
+            if response_view:
+                await interaction.response.send_message(embed=response_embed,view=response_view,ephemeral=True)
+            else:
+                await interaction.response.send_message(embed=response_embed,ephemeral=True)
         
         @disconnect.autocomplete("invite_url")
         async def disconnect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:

@@ -1,4 +1,4 @@
-from discord import Forbidden,Guild,Invite,Member
+from discord import Forbidden,Game,Guild,Invite,Member,Status
 from modubot import ModuleBase
 from typing import List,Dict,Optional,TYPE_CHECKING
 
@@ -46,6 +46,8 @@ class Module(ModuleBase):
 
     async def on_ready(self) -> None:
         self.ready_guilds = {}
+        await self.bot.change_presence(status=Status.idle,activity=Game(name="Starting up..."))
         for guild in self.bot.guilds:
             await self.persistence_layer.update_invite_uses(guild)
             self.ready_guilds[guild.id] = True
+        await self.bot.change_presence(status=Status.online,activity=Game(name="'/help' for help!"))

@@ -6,7 +6,7 @@ def embed(interaction: Interaction,success_msg: str) -> Embed:
         base_response.embed(interaction)
         .set_footer(text="All changes saved!")
     )
-    embed.color = Color.green()
+    embed.color = Color.brand_green()
     embed.title = "Success!"
     embed.description = success_msg
     return embed

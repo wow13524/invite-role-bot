@@ -11,7 +11,7 @@
         "token": ""
     },
     "PersistenceConfig": {
-        "db_name": "data.db",
+        "db_name": "invite_role_bot.db",
         "auto_vacuum": "FULL",
         "write_ahead_logging": true
     }

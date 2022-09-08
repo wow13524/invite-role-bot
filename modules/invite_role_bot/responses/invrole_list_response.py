@@ -13,18 +13,28 @@ def embed(interaction: Interaction,invite_roles_raw: Dict[Invite,List[Role]]) ->
     embed.description = "*Note: Certain invite URLs may be hidden above because they assign roles with permissions that are higher than yours.*"
     pagination_view: PaginationView = PaginationView(embed=embed)
 
-    member_permissions: Permissions = interaction.user.guild_permissions
-    for invite,roles in invite_roles_raw.items():
-        role_permissions: Permissions = Permissions()
-        for role in roles:
-            role_permissions |= role.permissions
+    if invite_roles_raw:
+        member_permissions: Permissions = interaction.user.guild_permissions
+        for invite,roles in invite_roles_raw.items():
+            role_permissions: Permissions = Permissions()
+            for role in roles:
+                role_permissions |= role.permissions
+            pagination_view.add_field(
+                name = "‍",
+                value = f"""
+                **Invite URL:** {invite.url if role_permissions <= member_permissions else "*Hidden*"}
+                **Channel:** {invite.channel.mention if isinstance(invite.channel,GuildChannel) else "*Unknown*"}
+                **Roles:** {", ".join([role.mention for role in roles])}
+                """,
+                inline = False
+            )
+    else:
         pagination_view.add_field(
-            name = "‍",
-            value = f"""
-            **Invite URL:** {invite.url if role_permissions <= member_permissions else "*Hidden*"}
-            **Channel:** {invite.channel.mention if isinstance(invite.channel,GuildChannel) else "*Unknown*"}
-            **Roles:** {", ".join([role.mention for role in roles])}
-            """,
-            inline = False
-        )
+                name = "‍",
+                value = """
+                **⚠️No invite-roles are currently connected!⚠️**
+                Use `/invrole connect` to start connecting invites to roles!
+                """,
+                inline = False
+            )
     return (embed,pagination_view)
