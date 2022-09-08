@@ -3,8 +3,10 @@
 from discord import Embed,Guild,Interaction,Invite,Member,Permissions,Role
 from discord.app_commands import Choice,CommandTree,describe,Group
 from discord.errors import NotFound
+from discord.ui import View
 from modubot import ModuleBase
-from typing import List,Optional,TYPE_CHECKING
+from typing import Dict,List,Optional,TYPE_CHECKING
+
 from ..responses import *
 if TYPE_CHECKING:
     from modubot import Bot
@@ -12,8 +14,6 @@ if TYPE_CHECKING:
     from ...core.slash_commands import Module as SlashCommands
 
 def permission_check(embed: Embed,permissions: Permissions) -> None:
-    if permissions.administrator:
-        return
     if not (permissions.manage_guild and permissions.manage_roles):
         missing_permissions: List[str] = []
         if not permissions.manage_guild:
@@ -48,7 +48,7 @@ class Module(ModuleBase):
             else:
                 if invite.guild != interaction.guild:
                     response_embed = wrong_guild_response.embed(interaction,invite_url)
-                elif not (bot_guild_permissions.administrator or bot_guild_permissions.manage_roles):
+                elif not bot_guild_permissions.manage_roles:
                     response_embed = manage_roles_response.embed(interaction)
                 elif interaction.user != interaction.guild.owner and interaction.user.top_role <= role:
                     response_embed = invoker_hierarchy_response.embed(interaction,role)
@@ -102,11 +102,13 @@ class Module(ModuleBase):
         @invrole_group.command(name="list",description="Lists all invite-role connections.")
         async def list(interaction: Interaction):
             assert interaction.guild
-            invites: List[Invite] = await persistence_layer.get_invites(interaction.guild)
-            response: str = ""
-            for invite in invites:
-                invite_roles: List[Role] = await persistence_layer.get_invite_roles(invite)
-                response += f"<https://discord.gg/{invite.code}>: {' '.join(role.mention for role in invite_roles)}\n"
-            await interaction.response.send_message(response or "No invite-roles connected.",ephemeral=True)
+            response_embed: Embed
+            response_view: Optional[View]
+            invite_roles_raw: Dict[Invite,List[Role]] = {}
+            for invite in await persistence_layer.get_invites(interaction.guild):
+                invite_roles_raw[invite] = await persistence_layer.get_invite_roles(invite)
+            response_embed,response_view = invrole_list_response.embed(interaction,invite_roles_raw)
+            permission_check(response_embed,interaction.guild.me.guild_permissions)
+            await interaction.response.send_message(embed=response_embed,view=response_view,ephemeral=True)
         
         cmd_tree.add_command(invrole_group)
