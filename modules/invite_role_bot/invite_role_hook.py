@@ -1,4 +1,4 @@
-from discord import Forbidden,Game,Guild,Invite,Member,Status
+from discord import Forbidden,Game,Guild,Invite,Member,Role,Status
 from modubot import ModuleBase
 from typing import List,Dict,Optional,TYPE_CHECKING
 
@@ -19,6 +19,7 @@ class Module(ModuleBase):
 
         func_inject.inject(self.on_guild_join)
         func_inject.inject(self.on_guild_update)
+        func_inject.inject(self.on_guild_role_update)
         func_inject.inject(self.on_member_join)
         func_inject.inject(self.on_ready)
     
@@ -35,9 +36,12 @@ class Module(ModuleBase):
                 await self.persistence_layer.update_invite_uses(after)
         except Forbidden:
             pass
+    
+    async def on_guild_role_update(self,before: Role,after: Role) -> None:
+            await self.persistence_layer.update_invite_uses(after.guild)
 
     async def on_member_join(self,member: Member) -> None:
-        if member.guild.id not in self.ready_guilds:
+        if member.guild.id not in self.ready_guilds or not member.guild.me.guild_permissions.manage_guild or not member.guild.me.guild_permissions.manage_roles:
             return
         used_invites: List[Invite] = await self.persistence_layer.update_invite_uses(member.guild)
         assert len(used_invites) == 1, "Other invites used before join"
