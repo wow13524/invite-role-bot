@@ -1,5 +1,6 @@
-from . import invrole
+from . import help,invrole
 
 __all__ = [
+    "help",
     "invrole"
 ]

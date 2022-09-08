@@ -33,7 +33,7 @@ def embed(interaction: Interaction,invite_roles_raw: Dict[Invite,List[Role]]) ->
                 name = "‍",
                 value = """
                 **⚠️No invite-roles are currently connected!⚠️**
-                Use `/invrole connect` to start connecting invites to roles!
+                Use `/invrole connect` to get started!
                 """,
                 inline = False
             )
