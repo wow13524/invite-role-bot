@@ -57,7 +57,6 @@ class PaginationView(View):
         self.set_page(self.page)
     
     async def update_interaction(self,interaction: Interaction) -> None:
-        self._update_buttons()
         await interaction.response.edit_message(embed=self._embed,view=self)
 
 class NavButton(Button[PaginationView]):

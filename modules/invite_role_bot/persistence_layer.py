@@ -118,7 +118,10 @@ class Module(ModuleBase):
         guild: InviteGuild = invite.guild
         assert isinstance(guild,Guild)
         invite_role_ids: List[int] = await self.get_invite_role_ids(invite)
-        return [role for role in guild.roles if role.id in invite_role_ids]
+        roles: List[Role] = [role for role in guild.roles if role.id in invite_role_ids]
+        if not roles:
+            await self.remove_invite_role(invite,None)
+        return roles
     
     async def update_invite_uses(self,guild: Guild) -> List[Invite]:
         used_invites: List[Invite] = []
