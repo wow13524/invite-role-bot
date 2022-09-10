@@ -15,7 +15,7 @@ InviteGuild = Optional[Union[Guild,Object,PartialInviteGuild]]
 
 class Module(ModuleBase):
     def __init__(self,bot: 'Bot') -> None:
-        self.bot: 'Bot' = bot
+        self.bot: Bot = bot
         self.connection: Connection
     
     async def postinit(self) -> None:

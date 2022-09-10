@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 class Module(ModuleBase):
     def __init__(self,bot: 'Bot') -> None:
-        self.bot: 'Bot' = bot
+        self.bot: Bot = bot
         self.persistence_layer: PersistenceLayer
         self.ready_guilds: Dict[int,bool] = {}
     
