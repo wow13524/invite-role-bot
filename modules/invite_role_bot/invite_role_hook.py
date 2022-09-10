@@ -64,8 +64,10 @@ class Module(ModuleBase):
     async def on_ready(self) -> None:
         self.ready_guilds = {}
         await self.bot.change_presence(status=Status.idle,activity=Game(name="Starting up..."))
-        for guild in tqdm(self.bot.guilds,desc="Updating Cached Guild Invites",unit="guilds"):
-            if not guild.unavailable:
+        guilds_map: Dict[int,Guild] = {guild.id:guild for guild in self.bot.guilds}
+        for guild_id in tqdm(await self.persistence_layer.get_guild_ids(),desc="Updating Cached Guild Invites",unit="guilds"):
+            guild: Optional[Guild] = guilds_map[guild_id]
+            if guild and not guild.unavailable:
                 await self.persistence_layer.update_invite_uses(guild)
-            self.ready_guilds[guild.id] = True
+                self.ready_guilds[guild.id] = True
         await self.bot.change_presence(status=Status.online,activity=Game(name="'/help' for help!"))

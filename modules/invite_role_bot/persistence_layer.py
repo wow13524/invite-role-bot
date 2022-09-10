@@ -112,6 +112,10 @@ class Module(ModuleBase):
     async def invite_role_exists(self,invite: Invite,role: Optional[Role]) -> bool:
         return await self._raw_invite_role_exists(invite.code,role.id if role else None)
 
+    async def get_guild_ids(self) -> List[int]:
+        cur: Cursor = await self.connection.cursor()
+        return [int(x[0]) for x in await (await cur.execute("SELECT id FROM guilds;")).fetchall()]
+
     async def get_invite_codes(self,guild: Guild) -> List[str]:
         return await self._raw_get_invite_codes(guild.id)
 
