@@ -50,55 +50,73 @@ class Module(ModuleBase):
             """
         )
     
-    async def guild_exists(self,guild: Guild) -> bool:
+    async def _raw_guild_exists(self,guild_id: int) -> bool:
         cur: Cursor = await self.connection.cursor()
-        return await (await cur.execute("SELECT 1 FROM guilds WHERE id = ?;",[guild.id])).fetchone() is not None
+        return await (await cur.execute("SELECT 1 FROM guilds WHERE id = ?;",[guild_id])).fetchone() is not None
 
-    async def invite_exists(self,invite: Invite) -> bool:
+    async def _raw_invite_exists(self,invite_code: str) -> bool:
         cur: Cursor = await self.connection.cursor()
-        return await (await cur.execute("SELECT 1 FROM invites WHERE code = ?;",[invite.code])).fetchone() is not None
+        return await (await cur.execute("SELECT 1 FROM invites WHERE code = ?;",[invite_code])).fetchone() is not None
+
+    async def _raw_invite_role_exists(self,invite_code: str,role_id: Optional[int]) -> bool:
+        cur: Cursor = await self.connection.cursor()
+        if role_id:
+            return await (await cur.execute("SELECT 1 FROM roles WHERE id = ? AND invite_code = ?;",[role_id,invite_code])).fetchone() is not None
+        else:
+            return await self._raw_invite_exists(invite_code)
+    
+    async def _raw_add_guild(self,guild_id: int) -> None:
+        cur: Cursor = await self.connection.cursor()
+        if not await self._raw_guild_exists(guild_id):
+            await cur.execute("INSERT INTO guilds (id) VALUES (?);",[guild_id])
+    
+    async def _raw_remove_guild_if_unused(self,guild_id: int) -> None:
+        cur: Cursor = await self.connection.cursor()
+        if not await (await cur.execute("SELECT 1 FROM invites WHERE guild_id = ?;",[guild_id])).fetchone():
+            await cur.execute("DELETE FROM guilds WHERE id = ?;",[guild_id])
+    
+    async def _raw_add_invite(self,guild_id: int,invite_code: str,invite_uses: int) -> None:
+        await self._raw_add_guild(guild_id)
+        cur: Cursor = await self.connection.cursor()
+        if not await self._raw_invite_exists(invite_code):
+            await cur.execute("INSERT INTO invites (code,uses,guild_id) VALUES (?,?,?);",[invite_code,invite_uses,guild_id])
+    
+    async def _raw_remove_invite_if_unused(self,guild_id: int,invite_code: str) -> None:
+        cur: Cursor = await self.connection.cursor()
+        if not await (await cur.execute("SELECT 1 FROM roles WHERE invite_code = ?;",[invite_code])).fetchone():
+            await cur.execute("DELETE FROM invites WHERE code = ?;",[invite_code])
+            await self._raw_remove_guild_if_unused(guild_id)
+
+    async def _raw_get_invite_codes(self,guild_id: int) -> List[str]:
+        cur: Cursor = await self.connection.cursor()
+        return [str(x[0]) for x in await (await cur.execute("SELECT code FROM invites WHERE guild_id = ?;",[guild_id])).fetchall()]
+    
+    async def _raw_get_invite_role_ids(self,invite_code: str) -> List[int]:
+        cur: Cursor = await self.connection.cursor()
+        return [x[0] for x in await (await cur.execute("SELECT id FROM roles WHERE invite_code = ?;",[invite_code])).fetchall()]
+    
+    async def _raw_add_invite_role(self,guild_id: int,invite_code: str,invite_uses: int,role_id: int) -> None:
+        cur: Cursor = await self.connection.cursor()
+        if not await self._raw_invite_role_exists(invite_code,role_id):
+            await self._raw_add_invite(guild_id,invite_code,invite_uses)
+            await cur.execute("INSERT INTO roles (id,invite_code) VALUES (?,?);",[role_id,invite_code])
+    
+    async def _raw_remove_invite_role(self,guild_id: int,invite_code: str,role_id: Optional[int]) -> None:
+        cur: Cursor = await self.connection.cursor()
+        if role_id:
+            await cur.execute("DELETE FROM roles WHERE invite_code = ? AND id = ?;",[invite_code,role_id])
+        else:
+            await cur.execute("DELETE FROM roles WHERE invite_code = ?;",[invite_code])
+        await self._raw_remove_invite_if_unused(guild_id,invite_code)
 
     async def invite_role_exists(self,invite: Invite,role: Optional[Role]) -> bool:
-        cur: Cursor = await self.connection.cursor()
-        if role:
-            return await (await cur.execute("SELECT 1 FROM roles WHERE id = ? AND invite_code = ?;",[role.id,invite.code])).fetchone() is not None
-        else:
-            return await self.invite_exists(invite)
-
-    async def _add_guild(self,guild: Guild) -> None:
-        cur: Cursor = await self.connection.cursor()
-        if not await self.guild_exists(guild):
-            await cur.execute("INSERT INTO guilds (id) VALUES (?);",[guild.id])
-    
-    async def _remove_guild_if_unused(self,guild: Guild) -> None:
-        cur: Cursor = await self.connection.cursor()
-        if not await (await cur.execute("SELECT 1 FROM invites WHERE guild_id = ?;",[guild.id])).fetchone():
-            await cur.execute("DELETE FROM guilds WHERE id = ?;",[guild.id])
-    
-    async def _add_invite(self,invite: Invite) -> None:
-        channel: InviteChannel = invite.channel
-        guild: InviteGuild = invite.guild
-        assert isinstance(channel,GuildChannel)
-        assert isinstance(guild,Guild)
-        await self._add_guild(guild)
-        cur: Cursor = await self.connection.cursor()
-        if not await self.invite_exists(invite):
-            await cur.execute("INSERT INTO invites (code,uses,guild_id) VALUES (?,?,?);",[invite.code,invite.uses or 0,guild.id])
-    
-    async def _remove_invite_if_unused(self,invite: Invite) -> None:
-        guild: InviteGuild = invite.guild
-        assert isinstance(guild,Guild)
-        cur: Cursor = await self.connection.cursor()
-        if not await (await cur.execute("SELECT 1 FROM roles WHERE invite_code = ?;",[invite.code])).fetchone():
-            await cur.execute("DELETE FROM invites WHERE code = ?;",[invite.code])
-            await self._remove_guild_if_unused(guild)
+        return await self._raw_invite_role_exists(invite.code,role.id if role else None)
 
     async def get_invite_codes(self,guild: Guild) -> List[str]:
-        cur: Cursor = await self.connection.cursor()
-        return [str(x[0]) for x in await (await cur.execute("SELECT code FROM invites WHERE guild_id = ?;",[guild.id])).fetchall()]
-    
+        return await self._raw_get_invite_codes(guild.id)
+
     async def get_invites(self,guild: Guild) -> List[Invite]:
-        invite_codes: List[str] = await self.get_invite_codes(guild)
+        invite_codes: List[str] = await self._raw_get_invite_codes(guild.id)
         if guild.me.guild_permissions.manage_guild:
             return [invite for invite in await guild.invites() if invite.code in invite_codes]
         else:   #Slower fallback to still serve invites even without manage_guild
@@ -109,18 +127,12 @@ class Module(ModuleBase):
                 except NotFound:
                     pass
             return invites
-    
-    async def get_invite_role_ids(self,invite: Invite) -> List[int]:
-        cur: Cursor = await self.connection.cursor()
-        return [x[0] for x in await (await cur.execute("SELECT id FROM roles WHERE invite_code = ?;",[invite.code])).fetchall()]
-    
-    async def get_invite_roles(self,invite: Invite) -> List[Role]:
-        guild: InviteGuild = invite.guild
-        assert isinstance(guild,Guild)
-        invite_role_ids: List[int] = await self.get_invite_role_ids(invite)
+
+    async def get_invite_roles(self,guild: Guild,invite_code: str) -> List[Role]:
+        invite_role_ids: List[int] = await self._raw_get_invite_role_ids(invite_code)
         roles: List[Role] = [role for role in guild.roles if role.id in invite_role_ids]
         if not roles:
-            await self.remove_invite_role(invite,None)
+            await self._raw_remove_invite_role(guild.id,invite_code,None)
         return roles
     
     async def update_invite_uses(self,guild: Guild) -> List[Invite]:
@@ -137,21 +149,14 @@ class Module(ModuleBase):
                         uses = ?
                     WHERE code = ?
                     """,
-                    [invite.uses or 0,invite.code]
+                    [invite.uses or -1,invite.code]
                 )
         return used_invites
 
     async def add_invite_role(self,invite: Invite,role: Role) -> None:
-        cur: Cursor = await self.connection.cursor()
-        if not await self.invite_role_exists(invite,role):
-            await self._add_invite(invite)
-            await cur.execute("INSERT INTO roles (id,invite_code) VALUES (?,?);",[role.id,invite.code])
-        await self.connection.commit()
+        assert invite.guild
+        await self._raw_add_invite_role(invite.guild.id,invite.code,invite.uses or -1,role.id)
     
     async def remove_invite_role(self,invite: Invite,role: Optional[Role]) -> None:
-        cur: Cursor = await self.connection.cursor()
-        if role:
-            await cur.execute("DELETE FROM roles WHERE invite_code = ? AND id = ?;",[invite.code,role.id])
-        else:
-            await cur.execute("DELETE FROM roles WHERE invite_code = ?;",[invite.code])
-        await self._remove_invite_if_unused(invite)
+        assert invite.guild
+        await self._raw_remove_invite_role(invite.guild.id,invite.code,role.id if role else None)

@@ -93,7 +93,12 @@ class Module(ModuleBase):
                     if role:
                         response_embed = await remove_invite_role(interaction)
                     else:
-                        response_embed,response_view = disconnect_confirm_response.embed(interaction,invite_url,len(await persistence_layer.get_invite_role_ids(invite)),remove_invite_role)
+                        response_embed,response_view = disconnect_confirm_response.embed(
+                            interaction,
+                            invite_url,
+                            len(await persistence_layer.get_invite_roles(interaction.guild,invite.code)),
+                            remove_invite_role
+                        )
             permission_check(response_embed,interaction.guild.me.guild_permissions)
             if response_view:
                 await interaction.response.send_message(embed=response_embed,view=response_view,ephemeral=True)
@@ -113,10 +118,11 @@ class Module(ModuleBase):
             assert interaction.guild
             response_embed: Embed
             response_view: Optional[View]
-            invite_roles_raw: Dict[Invite,List[Role]] = {}
-            for invite in await persistence_layer.get_invites(interaction.guild):
-                invite_roles_raw[invite] = await persistence_layer.get_invite_roles(invite)
-            response_embed,response_view = invrole_list_response.embed(interaction,invite_roles_raw)
+            invite_roles_raw: Dict[str,List[Role]] = {}
+            for invite_code in await persistence_layer.get_invite_codes(interaction.guild):
+                invite_roles_raw[invite_code] = await persistence_layer.get_invite_roles(interaction.guild,invite_code)
+            guild_invites: List[Invite] = await persistence_layer.get_invites(interaction.guild)
+            response_embed,response_view = invrole_list_response.embed(interaction,invite_roles_raw,guild_invites)
             permission_check(response_embed,interaction.guild.me.guild_permissions)
             await interaction.response.send_message(embed=response_embed,view=response_view,ephemeral=True)
         

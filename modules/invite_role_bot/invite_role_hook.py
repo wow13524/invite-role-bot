@@ -46,7 +46,7 @@ class Module(ModuleBase):
         used_invites: List[Invite] = await self.persistence_layer.update_invite_uses(member.guild)
         assert len(used_invites) == 1, "Other invites used before join"
         used_invite: Invite = used_invites[0]
-        await member.add_roles(*await self.persistence_layer.get_invite_roles(used_invite),reason=f"Invite-roles for {used_invite.code}")
+        await member.add_roles(*await self.persistence_layer.get_invite_roles(member.guild,used_invite.code),reason=f"Invite-roles for {used_invite.code}")
 
     async def on_ready(self) -> None:
         self.ready_guilds = {}
