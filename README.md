@@ -1,6 +1,6 @@
 # Invite-Role Bot
 
-A bot that assigns roles to new guild members depending on the invite URL used to join, written in Python.
+A bot that assigns roles to new guild members depending on the invite URL used to join, written in Python using [Modubot](https://github.com/wow13524/discord-modubot).
 
 ---
 
@@ -14,7 +14,7 @@ A bot that assigns roles to new guild members depending on the invite URL used t
 > ### `/invrole disconnect [invite_url: str] <role: Role>`
 > Disconnects one or all roles from the specified invite URL.  If a role is given, only that role is disconnected from the invite URL; otherwise, every role associated with the given invite URL will be disconnected.
 > 
-> `/invrole list`
+> ### `/invrole list`
 > Shows a list of all invite-role connections within this guild.
 
 ## Getting Started
