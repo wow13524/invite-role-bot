@@ -132,7 +132,7 @@ class Module(ModuleBase):
         invite_role_ids: List[int] = await self._raw_get_invite_role_ids(invite_code)
         roles: List[Role] = []
         for role in guild.roles:
-            if role.id in invite_role_ids:
+            if role.id in invite_role_ids and role < guild.me.top_role:
                 roles.append(role)
             else:
                 await self._raw_remove_invite_role(guild.id,invite_code,role.id)
@@ -144,7 +144,7 @@ class Module(ModuleBase):
         if guild.me.guild_permissions.manage_guild:
             for invite in await self.get_invites(guild):
                 saved_uses_row: Optional[Row] = await (await cur.execute("SELECT uses FROM invites WHERE code = ?;",[invite.code])).fetchone()
-                if saved_uses_row and invite.uses != saved_uses_row[0]:
+                if saved_uses_row and saved_uses_row[0] >= 0 and invite.uses != saved_uses_row[0]:
                     used_invites.append(invite)
                 await cur.execute(
                     """
