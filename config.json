@@ -16,16 +16,6 @@
         "token": ""
     },
     "PersistenceConfig": {
-        "db_name": "invite_role_bot.db",
-        "auto_vacuum": "FULL",
-        "write_ahead_logging": true
-    },
-    "InviteRoleBotConfig": {
-        "help_command": {
-            "invite_url": "",
-            "github_url": "",
-            "privacy_policy_url": "",
-            "donate_url": ""
-        }
+        "db_name": "invite_role_bot.db"
     }
 }
