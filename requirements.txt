@@ -1,0 +1,4 @@
+aiosqlite
+discord.py
+tqdm
+typeguard

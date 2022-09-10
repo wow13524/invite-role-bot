@@ -1,6 +1,11 @@
 {
     "BotConfig": {
+        "client_args": {
+            "chunk_guilds_at_startup": false,
+            "max_messages": null
+        },
         "intents": {
+            "guilds": true,
             "members": true
         },
         "enabled_modules": [

@@ -3,6 +3,8 @@ test_config.json
 *.db-shm
 *.db-wal
 test.py
+servers
+modules/irb_data_migration.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

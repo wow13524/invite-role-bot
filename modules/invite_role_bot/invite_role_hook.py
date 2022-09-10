@@ -1,5 +1,6 @@
 from discord import Forbidden,Game,Guild,Invite,Member,Role,Status
 from modubot import ModuleBase
+from tqdm import tqdm
 from typing import List,Dict,Optional,TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -44,14 +45,15 @@ class Module(ModuleBase):
         if member.guild.id not in self.ready_guilds or not member.guild.me.guild_permissions.manage_guild or not member.guild.me.guild_permissions.manage_roles:
             return
         used_invites: List[Invite] = await self.persistence_layer.update_invite_uses(member.guild)
-        assert len(used_invites) == 1, "Other invites used before join"
-        used_invite: Invite = used_invites[0]
-        await member.add_roles(*await self.persistence_layer.get_invite_roles(member.guild,used_invite.code),reason=f"Invite-roles for {used_invite.code}")
+        if used_invites:
+            assert len(used_invites) == 1, "Other invites used before join"
+            used_invite: Invite = used_invites[0]
+            await member.add_roles(*await self.persistence_layer.get_invite_roles(member.guild,used_invite.code),reason=f"Invite-roles for {used_invite.code}")
 
     async def on_ready(self) -> None:
         self.ready_guilds = {}
         await self.bot.change_presence(status=Status.idle,activity=Game(name="Starting up..."))
-        for guild in self.bot.guilds:
+        for guild in tqdm(self.bot.guilds,desc="Updating Cached Guild Invites"):
             await self.persistence_layer.update_invite_uses(guild)
             self.ready_guilds[guild.id] = True
         await self.bot.change_presence(status=Status.online,activity=Game(name="'/help' for help!"))

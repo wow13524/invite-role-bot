@@ -50,7 +50,7 @@ class Module(ModuleBase):
                     response_embed = wrong_guild_response.embed(interaction,invite_url)
                 elif not bot_guild_permissions.manage_roles:
                     response_embed = manage_roles_response.embed(interaction)
-                elif interaction.user != interaction.guild.owner and interaction.user.top_role <= role:
+                elif interaction.user.id != interaction.guild.owner_id and interaction.user.top_role <= role:
                     response_embed = invoker_hierarchy_response.embed(interaction,role)
                 elif role.position == 0 or role.is_bot_managed():
                     response_embed = cannot_assign_response.embed(interaction,role)

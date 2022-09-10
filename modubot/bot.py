@@ -33,11 +33,11 @@ class Bot(discord.AutoShardedClient):
         self._bot_config: BotConfig = self.config.get(BotConfig)
         self.loaded_modules: Dict[str,ModuleBase] = self._preload_modules()
 
-        intents: discord.Intents = discord.Intents.default()
+        intents: discord.Intents = discord.Intents.none()
         for intent,value in self._bot_config.intents.items():
             assert hasattr(intents,intent), f"invalid intent '{intent}' present in config"
             setattr(intents,intent,bool(value))
-        super().__init__(intents=intents)
+        super().__init__(intents=intents,**self._bot_config.client_args)
     
     def _preload_modules(self) -> Dict[str,ModuleBase]:
         loaded_modules: Dict[str,ModuleBase] = {}
