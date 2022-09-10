@@ -136,7 +136,7 @@ class Module(ModuleBase):
         invite_role_ids: List[int] = await self._raw_get_invite_role_ids(invite_code)
         roles: List[Role] = []
         for role in guild.roles:
-            if role.id in invite_role_ids and role < guild.me.top_role:
+            if role.id in invite_role_ids:
                 roles.append(role)
             else:
                 await self._raw_remove_invite_role(guild.id,invite_code,role.id)
