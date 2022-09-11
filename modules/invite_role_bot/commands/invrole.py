@@ -97,10 +97,12 @@ class Module(ModuleBase):
                     if role:
                         response_embed = await remove_invite_role(interaction)
                     else:
+                        active_roles: List[Role]
+                        active_roles,inactive_roles = await persistence_layer.get_invite_roles(interaction.guild,invite.code)
                         response_embed,response_view = disconnect_confirm_response.embed(
                             interaction,
                             invite_url,
-                            len(await persistence_layer.get_invite_roles(interaction.guild,invite.code)),
+                            len(active_roles)+len(inactive_roles),
                             remove_invite_role
                         )
             permission_check(response_embed,interaction.guild.me.guild_permissions)
