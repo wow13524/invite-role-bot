@@ -27,7 +27,7 @@ class Module(ModuleBase):
         func_inject.inject(self.on_ready)
 
     async def on_guild_available(self,guild: Guild) -> None:
-        if guild.id in self.ready_guilds:
+        if guild.id in self.ready_guilds and not self.ready_guilds[guild.id]:
             await self.persistence_layer.update_invite_uses(guild)
             self.ready_guilds[guild.id] = True
 
@@ -39,7 +39,6 @@ class Module(ModuleBase):
         try:
             before_vanity: Optional[Invite] = await before.vanity_invite()
             after_vanity: Optional[Invite] = await after.vanity_invite()
-            print(before_vanity,after_vanity)
             if after_vanity and after_vanity != before_vanity:
                 await self.persistence_layer.update_invite_uses(after)
         except Forbidden:
@@ -59,14 +58,16 @@ class Module(ModuleBase):
         if used_invites:
             assert len(used_invites) == 1, "Other invites used before join"
             used_invite: Invite = used_invites[0]
-            await member.add_roles(*await self.persistence_layer.get_invite_roles(member.guild,used_invite.code),reason=f"Invite-roles for {used_invite.code}")
+            active_roles: List[Role]
+            active_roles,_ = await self.persistence_layer.get_invite_roles(member.guild,used_invite.code)
+            await member.add_roles(*active_roles,reason=f"Invite-roles for {used_invite.code}")
 
     async def on_ready(self) -> None:
         self.ready_guilds = {}
         await self.bot.change_presence(status=Status.idle,activity=Game(name="Starting up..."))
         guilds_map: Dict[int,Guild] = {guild.id:guild for guild in self.bot.guilds}
         for guild_id in tqdm(await self.persistence_layer.get_guild_ids(),desc="Updating Cached Guild Invites",unit="guilds"):
-            guild: Optional[Guild] = guilds_map[guild_id]
+            guild: Optional[Guild] = guilds_map[guild_id] if guild_id in guilds_map else None
             if guild and not guild.unavailable:
                 await self.persistence_layer.update_invite_uses(guild)
                 self.ready_guilds[guild.id] = True

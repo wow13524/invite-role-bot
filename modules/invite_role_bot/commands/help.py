@@ -1,7 +1,7 @@
 # pyright: reportUnusedFunction=false
 
 from discord import Embed,Interaction
-from discord.app_commands import CommandTree
+from discord.app_commands import CommandTree,guild_only
 from discord.ui import View
 from modubot import ModuleBase
 from typing import TYPE_CHECKING
@@ -21,6 +21,7 @@ class Module(ModuleBase):
         slash_commands: SlashCommands = self.bot.get_module("modules.core.slash_commands")
         cmd_tree: CommandTree[Bot] = slash_commands.cmd_tree
         
+        @guild_only()
         @cmd_tree.command(name="help",description=f"Learn more about {self.bot.user.display_name if self.bot.user else 'Invite-Role Bot'}.")
         async def help(interaction: Interaction):
             response_embed: Embed

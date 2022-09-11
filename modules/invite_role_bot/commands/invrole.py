@@ -69,7 +69,11 @@ class Module(ModuleBase):
             guild: Optional[Guild] = interaction.guild
             invites: List[Invite] = []
             if guild and guild.me.guild_permissions.manage_guild:
-                invites = await guild.invites()
+                if guild.vanity_url_code:
+                    vanity_invite: Optional[Invite] = await guild.vanity_invite()
+                    if vanity_invite:
+                        invites.append(vanity_invite)
+                invites += await guild.invites()
             return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()]
         
         @invrole_group.command(name="disconnect",description="Disconnects an invite from a role.")
@@ -118,9 +122,15 @@ class Module(ModuleBase):
             assert interaction.guild
             response_embed: Embed
             response_view: Optional[View]
-            invite_roles_raw: Dict[str,List[Role]] = {}
+            invite_roles_raw: Dict[str,invrole_list_response.RolesPair] = {}
             for invite_code in await persistence_layer.get_invite_codes(interaction.guild):
-                invite_roles_raw[invite_code] = await persistence_layer.get_invite_roles(interaction.guild,invite_code)
+                active_roles: List[Role]
+                inactive_roles: List[Role]
+                active_roles,inactive_roles = await persistence_layer.get_invite_roles(interaction.guild,invite_code)
+                invite_roles_raw[invite_code] = {
+                    "active_roles": active_roles,
+                    "inactive_roles": inactive_roles
+                }
             guild_invites: List[Invite] = await persistence_layer.get_invites(interaction.guild)
             response_embed,response_view = invrole_list_response.embed(interaction,invite_roles_raw,guild_invites)
             permission_check(response_embed,interaction.guild.me.guild_permissions)

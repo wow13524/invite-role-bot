@@ -4,7 +4,7 @@ from discord import Guild,Invite,Object,PartialInviteChannel,PartialInviteGuild,
 from discord.abc import GuildChannel
 from discord.errors import NotFound
 from modubot import ModuleBase
-from typing import List,Optional,TYPE_CHECKING,Union
+from typing import List,Optional,Tuple,TYPE_CHECKING,Union
 
 if TYPE_CHECKING:
     from modubot import Bot
@@ -121,26 +121,34 @@ class Module(ModuleBase):
 
     async def get_invites(self,guild: Guild) -> List[Invite]:
         invite_codes: List[str] = await self._raw_get_invite_codes(guild.id)
+        invites: List[Invite] = []
         if guild.me.guild_permissions.manage_guild:
-            return [invite for invite in await guild.invites() if invite.code in invite_codes]
+            if guild.vanity_url_code in invite_codes:
+                vanity_invite: Optional[Invite] = await guild.vanity_invite()
+                if vanity_invite:
+                    invites.append(vanity_invite)
+            invites += [invite for invite in await guild.invites() if invite.code in invite_codes]
         else:   #Slower fallback to still serve invites even without manage_guild
-            invites: List[Invite] = []
             for invite_code in invite_codes:
                 try:
                     invites.append(await self.bot.fetch_invite(invite_code))
                 except NotFound:
                     pass
-            return invites
+        return invites
 
-    async def get_invite_roles(self,guild: Guild,invite_code: str) -> List[Role]:
+    async def get_invite_roles(self,guild: Guild,invite_code: str) -> Tuple[List[Role],List[Role]]:
         invite_role_ids: List[int] = await self._raw_get_invite_role_ids(invite_code)
-        roles: List[Role] = []
+        active_roles: List[Role] = []
+        inactive_roles: List[Role] = []
         for role in guild.roles:
             if role.id in invite_role_ids:
-                roles.append(role)
+                if role < guild.me.top_role:
+                    active_roles.append(role)
+                else:
+                    inactive_roles.append(role)
             else:
                 await self._raw_remove_invite_role(guild.id,invite_code,role.id)
-        return roles
+        return active_roles,inactive_roles
     
     async def update_invite_uses(self,guild: Guild) -> List[Invite]:
         used_invites: List[Invite] = []
