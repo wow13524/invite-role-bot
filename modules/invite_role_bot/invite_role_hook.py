@@ -1,3 +1,4 @@
+from aiohttp.client_exceptions import ServerDisconnectedError
 from discord import Forbidden,Game,Guild,Invite,Member,Role,Status
 from modubot import ModuleBase
 from tqdm import tqdm
@@ -52,7 +53,11 @@ class Module(ModuleBase):
             self.ready_guilds[guild.id] = False
 
     async def on_member_join(self,member: Member) -> None:
-        if member.guild.id not in self.ready_guilds or not self.ready_guilds[member.guild.id] or not member.guild.me.guild_permissions.manage_guild or not member.guild.me.guild_permissions.manage_roles:
+        if member.guild.id not in self.ready_guilds or not self.ready_guilds[member.guild.id]:
+            await self.persistence_layer.update_invite_uses(member.guild)
+            self.ready_guilds[member.guild.id] = True
+            return
+        if not member.guild.me.guild_permissions.manage_guild or not member.guild.me.guild_permissions.manage_roles:
             return
         used_invites: List[Invite] = await self.persistence_layer.update_invite_uses(member.guild)
         if used_invites:
@@ -69,6 +74,10 @@ class Module(ModuleBase):
         for guild_id in tqdm(await self.persistence_layer.get_guild_ids(),desc="Updating Cached Guild Invites",unit="guilds"):
             guild: Optional[Guild] = guilds_map[guild_id] if guild_id in guilds_map else None
             if guild and not guild.unavailable:
-                await self.persistence_layer.update_invite_uses(guild)
-                self.ready_guilds[guild.id] = True
+                while guild.id not in self.ready_guilds:
+                    try:
+                        await self.persistence_layer.update_invite_uses(guild)
+                        self.ready_guilds[guild.id] = True
+                    except ServerDisconnectedError:
+                        await self.bot.wait_for("connect")
         await self.bot.change_presence(status=Status.online,activity=Game(name="'/help' for help!"))
