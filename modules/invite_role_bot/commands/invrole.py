@@ -74,7 +74,7 @@ class Module(ModuleBase):
                     if vanity_invite:
                         invites.append(vanity_invite)
                 invites += await guild.invites()
-            return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()]
+            return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()][:25]
         
         @invrole_group.command(name="disconnect",description="Disconnects an invite from a role.")
         @describe(invite_url="The URL of the invite to disconnect a role from.",role="The role to disconnect from the invite.")
@@ -117,7 +117,7 @@ class Module(ModuleBase):
             invites: List[Invite] = []
             if guild:
                 invites = await persistence_layer.get_invites(guild)
-            return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()]
+            return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()][:25]
 
         @invrole_group.command(name="list",description="Lists all invite-role connections.")
         async def list(interaction: Interaction):
@@ -125,6 +125,7 @@ class Module(ModuleBase):
             response_embed: Embed
             response_view: Optional[View]
             invite_roles_raw: Dict[str,invrole_list_response.RolesPair] = {}
+            await interaction.response.defer(ephemeral=True,thinking=True)
             for invite_code in await persistence_layer.get_invite_codes(interaction.guild):
                 active_roles: List[Role]
                 inactive_roles: List[Role]
@@ -136,6 +137,6 @@ class Module(ModuleBase):
             guild_invites: List[Invite] = await persistence_layer.get_invites(interaction.guild)
             response_embed,response_view = invrole_list_response.embed(interaction,invite_roles_raw,guild_invites)
             permission_check(response_embed,interaction.guild.me.guild_permissions)
-            await interaction.response.send_message(embed=response_embed,view=response_view,ephemeral=True)
+            await interaction.followup.send(embed=response_embed,view=response_view,ephemeral=True)
         
         cmd_tree.add_command(invrole_group)
