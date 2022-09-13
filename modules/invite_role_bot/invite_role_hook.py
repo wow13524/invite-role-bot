@@ -26,6 +26,7 @@ class Module(ModuleBase):
         func_inject.inject(self.on_guild_unavailable)
         func_inject.inject(self.on_member_join)
         func_inject.inject(self.on_ready)
+        func_inject.inject(self.on_shard_resumed)
 
     async def on_guild_available(self,guild: Guild) -> None:
         if guild.id in self.ready_guilds and not self.ready_guilds[guild.id]:
@@ -81,3 +82,6 @@ class Module(ModuleBase):
                     except ServerDisconnectedError:
                         await self.bot.wait_for("connect")
         await self.bot.change_presence(status=Status.online,activity=Game(name="'/help' for help!"))
+    
+    async def on_shard_resumed(self,shard_id: int) -> None:
+        await self.bot.change_presence(status=Status.online,activity=Game(name="'/help' for help!"),shard_id=shard_id)
