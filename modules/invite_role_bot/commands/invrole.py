@@ -114,10 +114,10 @@ class Module(ModuleBase):
         @disconnect.autocomplete("invite_url")
         async def disconnect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
             guild: Optional[Guild] = interaction.guild
-            invites: List[Invite] = []
+            invites_codes: List[str] = []
             if guild:
-                invites = await persistence_layer.get_invites(guild)
-            return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()][:25]
+                invites_codes = await persistence_layer.get_invite_codes(guild)
+            return [Choice(name=f"https://discord.gg/{invite_code}",value=invite_code) for invite_code in invites_codes if current.lower().strip() in f"https://discord.gg/{invite_code}".lower()][:25]
 
         @invrole_group.command(name="list",description="Lists all invite-role connections.")
         async def list(interaction: Interaction):
