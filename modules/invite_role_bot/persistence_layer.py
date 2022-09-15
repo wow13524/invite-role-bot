@@ -89,7 +89,7 @@ class Module(ModuleBase):
 
     async def _raw_get_invite_codes(self,guild_id: int) -> List[str]:
         cur: Cursor = await self.connection.cursor()
-        return [str(x[0]) for x in await (await cur.execute("SELECT code FROM invites WHERE guild_id = ?;",[guild_id])).fetchall()]
+        return [x[0] for x in await (await cur.execute("SELECT code FROM invites WHERE guild_id = ?;",[guild_id])).fetchall()]
     
     async def _raw_get_invite_role_ids(self,invite_code: str) -> List[int]:
         cur: Cursor = await self.connection.cursor()
