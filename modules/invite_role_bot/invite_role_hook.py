@@ -1,5 +1,5 @@
 from aiohttp.client_exceptions import ServerDisconnectedError
-from discord import Forbidden,Game,Guild,Invite,Member,Role,Status
+from discord import Forbidden,Game,Guild,Invite,Member,NotFound,Role,Status
 from modubot import ModuleBase
 from tqdm import tqdm
 from typing import List,Dict,Optional,TYPE_CHECKING
@@ -54,7 +54,10 @@ class Module(ModuleBase):
             used_invite: Invite = used_invites[0]
             active_roles: List[Role]
             active_roles,_ = await self.persistence_layer.get_invite_roles(member.guild,used_invite.code)
-            await member.add_roles(*active_roles,reason=f"Invite-roles for {used_invite.code}")
+            try:
+                await member.add_roles(*active_roles,reason=f"Invite-roles for {used_invite.code}")
+            except NotFound:
+                pass
     
     async def on_shard_connect(self,shard_id: int) -> None:
         await self.bot.wait_until_ready()
