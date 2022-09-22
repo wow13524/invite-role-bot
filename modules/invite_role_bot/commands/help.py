@@ -26,5 +26,6 @@ class Module(ModuleBase):
         async def help(interaction: Interaction):
             response_embed: Embed
             response_view: View
+            await interaction.response.defer(ephemeral=True,thinking=True)
             response_embed,response_view = help_response.embed(interaction,self.config.help_command)
-            await interaction.response.send_message(embed=response_embed,view=response_view,ephemeral=True)
+            await interaction.followup.send(embed=response_embed,view=response_view,ephemeral=True)

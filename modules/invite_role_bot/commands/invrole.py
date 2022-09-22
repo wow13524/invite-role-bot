@@ -40,6 +40,7 @@ class Module(ModuleBase):
             assert isinstance(interaction.user,Member)
             bot_guild_permissions: Permissions = interaction.guild.me.guild_permissions
             response_embed: Embed
+            await interaction.response.defer(ephemeral=True,thinking=True)
             try:
                 invite_url = f"https://discord.gg/{invite_url.split('/')[-1]}"
                 invite: Invite = await self.bot.fetch_invite(invite_url)
@@ -62,7 +63,7 @@ class Module(ModuleBase):
                     await persistence_layer.add_invite_role(invite,role)
                     response_embed = connected_response.embed(interaction,invite_url,role)
             permission_check(response_embed,bot_guild_permissions)
-            await interaction.response.send_message(embed=response_embed,ephemeral=True)
+            await interaction.followup.send(embed=response_embed,ephemeral=True)
         
         @connect.autocomplete("invite_url")
         async def connect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
@@ -82,6 +83,7 @@ class Module(ModuleBase):
             assert interaction.guild
             response_embed: Embed
             response_view: Optional[View] = None
+            await interaction.response.defer(ephemeral=True,thinking=True)
             try:
                 invite_url = f"https://discord.gg/{invite_url.split('/')[-1]}"
                 invite: Invite = await self.bot.fetch_invite(invite_url)
@@ -107,9 +109,9 @@ class Module(ModuleBase):
                         )
             permission_check(response_embed,interaction.guild.me.guild_permissions)
             if response_view:
-                await interaction.response.send_message(embed=response_embed,view=response_view,ephemeral=True)
+                await interaction.followup.send(embed=response_embed,view=response_view,ephemeral=True)
             else:
-                await interaction.response.send_message(embed=response_embed,ephemeral=True)
+                await interaction.followup.send(embed=response_embed,ephemeral=True)
         
         @disconnect.autocomplete("invite_url")
         async def disconnect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
