@@ -20,7 +20,7 @@ def embed(interaction: Interaction,invite_roles_raw: Dict[str,RolesPair],guild_i
     embed.color = Color.blue()
     embed.title = f"Invite-Roles for {interaction.guild.name}:"
     embed.description = """
-    *Note: Certain invite URLs may be hidden above because they assign roles with permissions that are higher than yours.
+    *Note: Certain invite URLs may be hidden below because they assign roles with permissions that are higher than yours.
     
     ~~Crossed out~~ roles are connected but will not be assigned to new members because I don't have permission to assign them.*
     """
