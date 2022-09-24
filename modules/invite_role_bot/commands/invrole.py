@@ -1,5 +1,6 @@
 # pyright: reportUnusedFunction=false
 
+import asyncio
 from discord import Embed,Guild,Interaction,Invite,Member,Permissions,Role
 from discord.app_commands import Choice,CommandTree,describe,Group
 from discord.errors import NotFound
@@ -65,17 +66,26 @@ class Module(ModuleBase):
             permission_check(response_embed,bot_guild_permissions)
             await interaction.followup.send(embed=response_embed,ephemeral=True)
         
-        @connect.autocomplete("invite_url")
-        async def connect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
-            guild: Optional[Guild] = interaction.guild
+        async def get_all_guild_invites(guild: Guild) -> List[Invite]:
             invites: List[Invite] = []
-            if guild and guild.me.guild_permissions.manage_guild:
+            if guild.me.guild_permissions.manage_guild:
                 if guild.vanity_url_code:
                     vanity_invite: Optional[Invite] = await guild.vanity_invite()
                     if vanity_invite:
                         invites.append(vanity_invite)
                 invites += await guild.invites()
-            return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()][:25]
+            return invites
+
+        @connect.autocomplete("invite_url")
+        async def connect_auto_invite_url(interaction: Interaction,current: str) -> List[Choice[str]]:
+            guild: Optional[Guild] = interaction.guild
+            if guild:
+                try:
+                    invites: List[Invite] = await asyncio.wait_for(get_all_guild_invites(guild),timeout=2)
+                    return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()][:25]
+                except asyncio.TimeoutError:
+                    pass
+            return [Choice(name="Unable to load invites, please try again later.",value="lol_dont_actually_click_me")]
         
         @invrole_group.command(name="disconnect",description="Disconnects an invite from a role.")
         @describe(invite_url="The URL of the invite to disconnect a role from.",role="The role to disconnect from the invite.")
