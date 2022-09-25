@@ -122,18 +122,19 @@ class Module(ModuleBase):
     async def get_invites(self,guild: Guild) -> List[Invite]:
         invite_codes: List[str] = await self._raw_get_invite_codes(guild.id)
         invites: List[Invite] = []
-        if guild.me.guild_permissions.manage_guild:
-            if guild.vanity_url_code in invite_codes:
-                vanity_invite: Optional[Invite] = await guild.vanity_invite()
-                if vanity_invite:
-                    invites.append(vanity_invite)
-            invites += [invite for invite in await guild.invites() if invite.code in invite_codes]
-        else:   #Slower fallback to still serve invites even without manage_guild
-            for invite_code in invite_codes:
-                try:
-                    invites.append(await self.bot.fetch_invite(invite_code))
-                except NotFound:
-                    pass
+        if invite_codes:
+            if guild.me.guild_permissions.manage_guild:
+                if guild.vanity_url_code in invite_codes:
+                    vanity_invite: Optional[Invite] = await guild.vanity_invite()
+                    if vanity_invite:
+                        invites.append(vanity_invite)
+                invites += [invite for invite in await guild.invites() if invite.code in invite_codes]
+            else:   #Slower fallback to still serve invites even without manage_guild
+                for invite_code in invite_codes:
+                    try:
+                        invites.append(await self.bot.fetch_invite(invite_code))
+                    except NotFound:
+                        pass
         return invites
 
     async def get_invite_roles(self,guild: Guild,invite_code: str) -> Tuple[List[Role],List[Role]]:
