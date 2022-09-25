@@ -41,7 +41,7 @@ class Module(ModuleBase):
             after_vanity: Optional[Invite] = await after.vanity_invite()
             if after_vanity and after_vanity != before_vanity:
                 await self.persistence_layer.update_invite_uses(after)
-        except Forbidden:
+        except Forbidden or NotFound:
             pass
     
     async def on_guild_role_update(self,before: Role,after: Role) -> None:  #Intended for updating invite uses when the bot initially receives permission

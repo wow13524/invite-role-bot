@@ -125,7 +125,7 @@ class Module(ModuleBase):
             invites_codes: List[str] = []
             if guild:
                 invites_codes = await persistence_layer.get_invite_codes(guild)
-            return [Choice(name=f"https://discord.gg/{invite_code}",value="https://discord.gg/{invite_code}") for invite_code in invites_codes if current.lower().strip() in f"https://discord.gg/{invite_code}".lower()][:25]
+            return [Choice(name=f"https://discord.gg/{invite_code}",value=f"https://discord.gg/{invite_code}") for invite_code in invites_codes if current.lower().strip() in f"https://discord.gg/{invite_code}".lower()][:25]
 
         @invrole_group.command(name="list",description="Lists all invite-role connections.")
         async def list(interaction: Interaction):
