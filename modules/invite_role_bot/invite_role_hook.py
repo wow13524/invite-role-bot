@@ -13,7 +13,7 @@ class Module(ModuleBase):
     def __init__(self,bot: 'Bot') -> None:
         self.bot: Bot = bot
         self.persistence_layer: PersistenceLayer
-        self.ready_guilds: Dict[int,bool] = {}
+        self._ready_guilds: Dict[int,bool] = {}
     
     async def postinit(self) -> None:
         func_inject: FuncInject = self.bot.get_module("modules.core.func_inject")
@@ -25,9 +25,15 @@ class Module(ModuleBase):
         func_inject.inject(self.on_member_join)
         func_inject.inject(self.on_shard_connect)
 
+    async def prepare_guild(self,guild: Guild) -> bool:
+        if guild.id not in self._ready_guilds or not self._ready_guilds[guild.id]:
+            await self.persistence_layer.update_invite_uses(guild)
+            self._ready_guilds[guild.id] = True
+            return False
+        return True
+
     async def on_guild_join(self,guild: Guild) -> None:
-        await self.persistence_layer.update_invite_uses(guild)
-        self.ready_guilds[guild.id] = True
+        await self.prepare_guild(guild)
 
     async def on_guild_update(self,before: Guild,after: Guild) -> None:
         try:
@@ -38,13 +44,12 @@ class Module(ModuleBase):
         except Forbidden:
             pass
     
-    async def on_guild_role_update(self,before: Role,after: Role) -> None:
+    async def on_guild_role_update(self,before: Role,after: Role) -> None:  #Intended for updating invite uses when the bot initially receives permission
+        if not before.guild.me.guild_permissions.manage_guild and after.guild.me.guild_permissions.manage_guild:
             await self.persistence_layer.update_invite_uses(after.guild)
 
     async def on_member_join(self,member: Member) -> None:
-        if member.guild.id not in self.ready_guilds or not self.ready_guilds[member.guild.id]:
-            await self.persistence_layer.update_invite_uses(member.guild)
-            self.ready_guilds[member.guild.id] = True
+        if not await self.prepare_guild(member.guild):
             return
         if not member.guild.me.guild_permissions.manage_guild or not member.guild.me.guild_permissions.manage_roles:
             return
@@ -62,15 +67,11 @@ class Module(ModuleBase):
     async def on_shard_connect(self,shard_id: int) -> None:
         await self.bot.wait_until_ready()
         await self.bot.change_presence(status=Status.idle,activity=Game(name="Starting up..."),shard_id=shard_id)
-        shard_guild_map: Dict[int,Guild] = {guild.id:guild for guild in self.bot.guilds if guild.shard_id == shard_id}
-        for guild_id in shard_guild_map.keys():
-            self.ready_guilds[guild_id] = False
-        for guild_id,guild in tqdm(shard_guild_map.items(),desc=f"Caching Invites for Shard #{shard_id}",unit="guilds"):
+        shard_guilds: List[Guild] = [guild for guild in self.bot.guilds if guild.shard_id == shard_id]
+        for guild in tqdm(shard_guilds,desc=f"Caching Invites for Shard #{shard_id}",unit="guilds"):
             if not guild.unavailable:
-                while not self.ready_guilds[guild_id]:
-                    try:
-                        await self.persistence_layer.update_invite_uses(guild)
-                        self.ready_guilds[guild.id] = True
-                    except ServerDisconnectedError:
-                        return
+                try:
+                    await self.prepare_guild(guild)
+                except ServerDisconnectedError:
+                    return
         await self.bot.change_presence(status=Status.online,activity=Game(name="'/help' for help!"),shard_id=shard_id)
