@@ -58,7 +58,7 @@ class Module(ModuleBase):
                     response_embed = cannot_assign_response.embed(interaction,role)
                 elif interaction.guild.me.top_role <= role:
                     response_embed = bot_hierarchy_response.embed(interaction,role)
-                elif await persistence_layer.invite_role_exists(invite,role):
+                elif await persistence_layer.invite_role_exists(invite.code,role):
                     response_embed = already_connected_response.embed(interaction,invite_url,role)
                 else:
                     await persistence_layer.add_invite_role(invite,role)
@@ -82,7 +82,7 @@ class Module(ModuleBase):
             if guild:
                 try:
                     invites: List[Invite] = await asyncio.wait_for(get_all_guild_invites(guild),timeout=2)
-                    return [Choice(name=invite.url,value=invite.code) for invite in invites if current.lower().strip() in invite.url.lower()][:25]
+                    return [Choice(name=invite.url,value=invite.url) for invite in invites if current.lower().strip() in invite.url.lower()][:25]
                 except asyncio.TimeoutError:
                     pass
             return [Choice(name="Unable to load invites, please try again later.",value="lol_dont_actually_click_me")]
@@ -94,29 +94,25 @@ class Module(ModuleBase):
             response_embed: Embed
             response_view: Optional[View] = None
             await interaction.response.defer(ephemeral=True,thinking=True)
-            try:
-                invite_url = f"https://discord.gg/{invite_url.split('/')[-1]}"
-                invite: Invite = await self.bot.fetch_invite(invite_url)
-            except NotFound:
-                response_embed = invalid_invite_response.embed(interaction,invite_url)
+            invite_code: str = invite_url.split('/')[-1]
+            if not await persistence_layer.invite_role_exists(invite_code,None):
+                response_embed = not_connected_response.embed(interaction,invite_url,role)
             else:
-                if not await persistence_layer.invite_role_exists(invite,role):
-                    response_embed = not_connected_response.embed(interaction,invite_url,role)
+                async def remove_invite_role(interaction: Interaction) -> Embed:
+                    assert interaction.guild
+                    await persistence_layer.remove_invite_role(interaction.guild,invite_code,role)
+                    return disconnected_response.embed(interaction,invite_url,role)
+                if role:
+                    response_embed = await remove_invite_role(interaction)
                 else:
-                    async def remove_invite_role(interaction: Interaction) -> Embed:
-                        await persistence_layer.remove_invite_role(invite,role)
-                        return disconnected_response.embed(interaction,invite_url,role)
-                    if role:
-                        response_embed = await remove_invite_role(interaction)
-                    else:
-                        active_roles: List[Role]
-                        active_roles,inactive_roles = await persistence_layer.get_invite_roles(interaction.guild,invite.code)
-                        response_embed,response_view = disconnect_confirm_response.embed(
-                            interaction,
-                            invite_url,
-                            len(active_roles)+len(inactive_roles),
-                            remove_invite_role
-                        )
+                    active_roles: List[Role]
+                    active_roles,inactive_roles = await persistence_layer.get_invite_roles(interaction.guild,invite_code)
+                    response_embed,response_view = disconnect_confirm_response.embed(
+                        interaction,
+                        invite_url,
+                        len(active_roles)+len(inactive_roles),
+                        remove_invite_role
+                    )
             permission_check(response_embed,interaction.guild.me.guild_permissions)
             if response_view:
                 await interaction.followup.send(embed=response_embed,view=response_view,ephemeral=True)
@@ -129,7 +125,7 @@ class Module(ModuleBase):
             invites_codes: List[str] = []
             if guild:
                 invites_codes = await persistence_layer.get_invite_codes(guild)
-            return [Choice(name=f"https://discord.gg/{invite_code}",value=invite_code) for invite_code in invites_codes if current.lower().strip() in f"https://discord.gg/{invite_code}".lower()][:25]
+            return [Choice(name=f"https://discord.gg/{invite_code}",value="https://discord.gg/{invite_code}") for invite_code in invites_codes if current.lower().strip() in f"https://discord.gg/{invite_code}".lower()][:25]
 
         @invrole_group.command(name="list",description="Lists all invite-role connections.")
         async def list(interaction: Interaction):

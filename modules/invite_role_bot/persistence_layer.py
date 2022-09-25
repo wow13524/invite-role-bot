@@ -109,8 +109,8 @@ class Module(ModuleBase):
             await cur.execute("DELETE FROM roles WHERE invite_code = ?;",[invite_code])
         await self._raw_remove_invite_if_unused(guild_id,invite_code)
 
-    async def invite_role_exists(self,invite: Invite,role: Optional[Role]) -> bool:
-        return await self._raw_invite_role_exists(invite.code,role.id if role else None)
+    async def invite_role_exists(self,invite_code: str,role: Optional[Role]) -> bool:
+        return await self._raw_invite_role_exists(invite_code,role.id if role else None)
 
     async def get_guild_ids(self) -> List[int]:
         cur: Cursor = await self.connection.cursor()
@@ -172,6 +172,5 @@ class Module(ModuleBase):
         assert invite.guild
         await self._raw_add_invite_role(invite.guild.id,invite.code,invite.uses or -1,role.id)
     
-    async def remove_invite_role(self,invite: Invite,role: Optional[Role]) -> None:
-        assert invite.guild
-        await self._raw_remove_invite_role(invite.guild.id,invite.code,role.id if role else None)
+    async def remove_invite_role(self,guild: Guild,invite_code: str,role: Optional[Role]) -> None:
+        await self._raw_remove_invite_role(guild.id,invite_code,role.id if role else None)
