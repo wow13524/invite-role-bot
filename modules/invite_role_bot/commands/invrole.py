@@ -6,7 +6,7 @@ from discord.app_commands import Choice,CommandTree,describe,Group
 from discord.errors import Forbidden,NotFound
 from discord.ui import View
 from modubot import ModuleBase
-from typing import Dict,List,Optional,TYPE_CHECKING
+from typing import Dict,Generator,List,Optional,TYPE_CHECKING
 
 from ..responses import *
 if TYPE_CHECKING:
@@ -127,7 +127,8 @@ class Module(ModuleBase):
             invites_codes: List[str] = []
             if guild:
                 invites_codes = await persistence_layer.get_invite_codes(guild)
-            return [Choice(name=f"https://discord.gg/{invite_code}",value=f"https://discord.gg/{invite_code}") for invite_code in invites_codes if current.lower().strip() in f"https://discord.gg/{invite_code}".lower()][:25]
+            invite_urls: Generator[str,None,None] = (f"https://discord.gg/{invite_code}" for invite_code in invites_codes)
+            return [Choice(name=invite_url,value=invite_url) for invite_url in invite_urls if current.lower().strip() in invite_url.lower()][:25]
 
         @invrole_group.command(name="list",description="Lists all invite-role connections.")
         async def list(interaction: Interaction):
