@@ -28,10 +28,10 @@ class ModuleBase:
 
 class Bot(discord.AutoShardedClient):
     def __init__(self,work_dir: str = os.getcwd(),config_name: str=DEFAULT_CONFIG_NAME):
-        self.work_dir: str = work_dir
-        self.config: Config = Config(config_path=os.path.join(work_dir,config_name))
-        self._bot_config: BotConfig = self.config.get(BotConfig)
-        self.loaded_modules: Dict[str,ModuleBase] = self._preload_modules()
+        self._work_dir: str = work_dir
+        self._config: Config = Config(config_path=os.path.join(work_dir,config_name))
+        self._bot_config: BotConfig = self._config.get(BotConfig)
+        self._loaded_modules: Dict[str,ModuleBase] = self._preload_modules()
 
         intents: discord.Intents = discord.Intents.none()
         for intent,value in self._bot_config.intents.items():
@@ -51,17 +51,25 @@ class Bot(discord.AutoShardedClient):
                 loaded_modules[module_name] = module_class(self)
         return loaded_modules
     
+    @property
+    def config(self):
+        return self._config
+
+    @property
+    def work_dir(self):
+        return self._work_dir
+
     def get_module(self,module_name: str) -> Any:
-        if module_name in self.loaded_modules:
-            return self.loaded_modules[module_name]
+        if module_name in self._loaded_modules:
+            return self._loaded_modules[module_name]
         else:
             raise Exception(f"cannot find module '{module_name}'")
 
     async def start(self,token: str,*,reconnect: bool=True) -> None:
-        for module_instance in self.loaded_modules.values():
+        for module_instance in self._loaded_modules.values():
             if hasattr(module_instance,"init") and callable(module_instance.init):
                 await module_instance.init()
-        for module_instance in self.loaded_modules.values():
+        for module_instance in self._loaded_modules.values():
             if hasattr(module_instance,"postinit") and callable(module_instance.postinit):
                 await module_instance.postinit()
         await super().start(token,reconnect=reconnect)
