@@ -1,10 +1,11 @@
 from sqlite3 import Row
 from aiosqlite import Connection,Cursor
+from cachetools import TTLCache
 from discord import Guild,Invite,Object,PartialInviteChannel,PartialInviteGuild,Role
 from discord.abc import GuildChannel
 from discord.errors import NotFound
 from modubot import ModuleBase
-from typing import Dict,List,Optional,Tuple,TYPE_CHECKING,Union
+from typing import List,Optional,Tuple,TYPE_CHECKING,Union
 
 if TYPE_CHECKING:
     from modubot import Bot
@@ -16,7 +17,7 @@ InviteGuild = Optional[Union[Guild,Object,PartialInviteGuild]]
 class Module(ModuleBase):
     def __init__(self,bot: 'Bot') -> None:
         self.bot: Bot = bot
-        self.cached_invites: Dict[int,List[Invite]] = {}
+        self.cached_invites: TTLCache[int,List[Invite]] = TTLCache(maxsize=512,ttl=30)
         self.connection: Connection
     
     async def postinit(self) -> None:
@@ -156,17 +157,19 @@ class Module(ModuleBase):
         return self.cached_invites[guild.id]
 
     async def get_invites(self,guild: Guild,cached: bool=True) -> List[Invite]:
-        if guild.id not in self.cached_invites or not cached:
-            await self.cache_guild_invites(guild)
-        invites: List[Invite] = await self.get_cached_guild_invites(guild)
         invite_codes: List[str] = await self._raw_get_invite_codes(guild.id)
-        matched_invites: List[Invite] = []
-        if guild.vanity_url_code in invite_codes:
-            vanity_invite: Optional[Invite] = await guild.vanity_invite()
-            if vanity_invite:
-                matched_invites.append(vanity_invite)
-        matched_invites += [invite for invite in invites if invite.code in invite_codes]
-        return matched_invites
+        if invite_codes:
+            if guild.id not in self.cached_invites or not cached:
+                await self.cache_guild_invites(guild)
+            invites: List[Invite] = await self.get_cached_guild_invites(guild)
+            matched_invites: List[Invite] = []
+            if guild.vanity_url_code in invite_codes:
+                vanity_invite: Optional[Invite] = await guild.vanity_invite()
+                if vanity_invite:
+                    matched_invites.append(vanity_invite)
+            matched_invites += [invite for invite in invites if invite.code in invite_codes]
+            return matched_invites
+        return []
 
     async def get_invite_roles(self,guild: Guild,invite_code: str) -> Tuple[List[Role],List[Role]]:
         invite_role_ids: List[int] = await self._raw_get_invite_role_ids(invite_code)

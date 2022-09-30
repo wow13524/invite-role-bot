@@ -1,4 +1,5 @@
 aiosqlite
+cachetools
 discord.py
 tqdm
 typeguard
