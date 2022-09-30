@@ -4,7 +4,7 @@ from discord import Guild,Invite,Object,PartialInviteChannel,PartialInviteGuild,
 from discord.abc import GuildChannel
 from discord.errors import NotFound
 from modubot import ModuleBase
-from typing import List,Optional,Tuple,TYPE_CHECKING,Union
+from typing import Dict,List,Optional,Tuple,TYPE_CHECKING,Union
 
 if TYPE_CHECKING:
     from modubot import Bot
@@ -16,6 +16,7 @@ InviteGuild = Optional[Union[Guild,Object,PartialInviteGuild]]
 class Module(ModuleBase):
     def __init__(self,bot: 'Bot') -> None:
         self.bot: Bot = bot
+        self.cached_invites: Dict[int,List[Invite]] = {}
         self.connection: Connection
     
     async def postinit(self) -> None:
@@ -119,23 +120,53 @@ class Module(ModuleBase):
     async def get_invite_codes(self,guild: Guild) -> List[str]:
         return await self._raw_get_invite_codes(guild.id)
 
-    async def get_invites(self,guild: Guild) -> List[Invite]:
-        invite_codes: List[str] = await self._raw_get_invite_codes(guild.id)
-        invites: List[Invite] = []
-        if invite_codes:
-            if guild.me.guild_permissions.manage_guild:
-                if guild.vanity_url_code in invite_codes:
+    async def cache_guild_invites(self,guild: Guild) -> None:
+        self.cached_invites[guild.id] = []
+        if guild.me.guild_permissions.manage_guild:
+            if guild.vanity_url:
+                try:
                     vanity_invite: Optional[Invite] = await guild.vanity_invite()
                     if vanity_invite:
-                        invites.append(vanity_invite)
-                invites += [invite for invite in await guild.invites() if invite.code in invite_codes]
-            else:   #Slower fallback to still serve invites even without manage_guild
-                for invite_code in invite_codes:
-                    try:
-                        invites.append(await self.bot.fetch_invite(invite_code))
-                    except NotFound:
-                        pass
-        return invites
+                        self.cached_invites[guild.id].append(vanity_invite)
+                except NotFound:
+                    pass
+            self.cached_invites[guild.id] += await guild.invites()
+        else:   #Slower fallback to still serve invites even without manage_guild
+            for invite_code in await self._raw_get_invite_codes(guild.id):
+                try:
+                    self.cached_invites[guild.id].append(await self.bot.fetch_invite(invite_code))
+                except NotFound:
+                    pass
+    
+    async def cache_guild_invites_add(self,guild: Guild,invite: Invite) -> None:
+        if guild.id in self.cached_invites:
+            self.cached_invites[guild.id].append(invite)
+        else:
+            await self.cache_guild_invites(guild)
+    
+    async def cache_guild_invites_remove(self,guild: Guild,invite: Invite) -> None:
+        if guild.id in self.cached_invites:
+            self.cached_invites[guild.id].remove(invite)
+        else:
+            await self.cache_guild_invites(guild)
+    
+    async def get_cached_guild_invites(self,guild: Guild) -> List[Invite]:
+        if guild.id not in self.cached_invites:
+            await self.cache_guild_invites(guild)
+        return self.cached_invites[guild.id]
+
+    async def get_invites(self,guild: Guild,cached: bool=True) -> List[Invite]:
+        if guild.id not in self.cached_invites or not cached:
+            await self.cache_guild_invites(guild)
+        invites: List[Invite] = await self.get_cached_guild_invites(guild)
+        invite_codes: List[str] = await self._raw_get_invite_codes(guild.id)
+        matched_invites: List[Invite] = []
+        if guild.vanity_url_code in invite_codes:
+            vanity_invite: Optional[Invite] = await guild.vanity_invite()
+            if vanity_invite:
+                matched_invites.append(vanity_invite)
+        matched_invites += [invite for invite in invites if invite.code in invite_codes]
+        return matched_invites
 
     async def get_invite_roles(self,guild: Guild,invite_code: str) -> Tuple[List[Role],List[Role]]:
         invite_role_ids: List[int] = await self._raw_get_invite_role_ids(invite_code)
@@ -155,7 +186,7 @@ class Module(ModuleBase):
         used_invites: List[Invite] = []
         cur: Cursor = await self.connection.cursor()
         if guild.me.guild_permissions.manage_guild:
-            for invite in await self.get_invites(guild):
+            for invite in await self.get_invites(guild,False):
                 saved_uses_row: Optional[Row] = await (await cur.execute("SELECT uses FROM invites WHERE code = ?;",[invite.code])).fetchone()
                 if saved_uses_row and saved_uses_row[0] >= 0 and invite.uses != saved_uses_row[0]:
                     used_invites.append(invite)

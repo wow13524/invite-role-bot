@@ -6,6 +6,7 @@
         },
         "intents": {
             "guilds": true,
+            "invites": true,
             "members": true
         },
         "enabled_modules": [

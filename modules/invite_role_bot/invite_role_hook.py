@@ -22,6 +22,8 @@ class Module(ModuleBase):
         func_inject.inject(self.on_guild_join)
         func_inject.inject(self.on_guild_update)
         func_inject.inject(self.on_guild_role_update)
+        func_inject.inject(self.on_invite_create)
+        func_inject.inject(self.on_invite_delete)
         func_inject.inject(self.on_member_join)
         func_inject.inject(self.on_shard_connect)
 
@@ -47,6 +49,14 @@ class Module(ModuleBase):
     async def on_guild_role_update(self,before: Role,after: Role) -> None:  #Intended for updating invite uses when the bot initially receives permission
         if not before.guild.me.guild_permissions.manage_guild and after.guild.me.guild_permissions.manage_guild:
             await self.persistence_layer.update_invite_uses(after.guild)
+
+    async def on_invite_create(self,invite: Invite) -> None:
+        assert isinstance(invite.guild,Guild)
+        await self.persistence_layer.cache_guild_invites_add(invite.guild,invite)
+
+    async def on_invite_delete(self,invite: Invite) -> None:
+        assert isinstance(invite.guild,Guild)
+        await self.persistence_layer.cache_guild_invites_remove(invite.guild,invite)
 
     async def on_member_join(self,member: Member) -> None:
         if not await self.prepare_guild(member.guild):

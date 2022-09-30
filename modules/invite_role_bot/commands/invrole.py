@@ -3,7 +3,7 @@
 import asyncio
 from discord import Embed,Guild,Interaction,Invite,Member,Permissions,Role
 from discord.app_commands import Choice,CommandTree,describe,Group
-from discord.errors import Forbidden,NotFound
+from discord.errors import NotFound
 from discord.ui import View
 from modubot import ModuleBase
 from typing import Dict,Generator,List,Optional,TYPE_CHECKING
@@ -68,14 +68,7 @@ class Module(ModuleBase):
         
         async def get_all_guild_invites(guild: Guild) -> List[Invite]:
             invites: List[Invite] = []
-            if guild.me.guild_permissions.manage_guild:
-                try:
-                    vanity_invite: Optional[Invite] = await guild.vanity_invite()
-                    if vanity_invite:
-                        invites.append(vanity_invite)
-                except Forbidden or NotFound:
-                    pass
-                invites += await guild.invites()
+            invites += await persistence_layer.get_cached_guild_invites(guild)
             return invites
 
         @connect.autocomplete("invite_url")
