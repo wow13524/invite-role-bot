@@ -28,11 +28,12 @@ class Module(ModuleBase):
         func_inject.inject(self.on_shard_connect)
 
     async def prepare_guild(self,guild: Guild) -> bool:
-        if guild.id not in self._ready_guilds or not self._ready_guilds[guild.id]:
+        if guild.id not in self._ready_guilds:
+            self._ready_guilds[guild.id] = False
             await self.persistence_layer.update_invite_uses(guild)
             self._ready_guilds[guild.id] = True
             return False
-        return True
+        return self._ready_guilds[guild.id]
 
     async def on_guild_join(self,guild: Guild) -> None:
         await self.prepare_guild(guild)
