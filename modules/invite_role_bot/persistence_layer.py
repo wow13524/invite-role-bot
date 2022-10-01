@@ -146,7 +146,7 @@ class Module(ModuleBase):
             await self.cache_guild_invites(guild)
     
     async def cache_guild_invites_remove(self,guild: Guild,invite: Invite) -> None:
-        if guild.id in self.cached_invites:
+        if guild.id in self.cached_invites and invite in self.cached_invites[guild.id]:
             self.cached_invites[guild.id].remove(invite)
         else:
             await self.cache_guild_invites(guild)
