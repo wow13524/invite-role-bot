@@ -191,7 +191,7 @@ class Module(ModuleBase):
         if guild.me.guild_permissions.manage_guild:
             for invite in await self.get_invites(guild,False):
                 saved_uses_row: Optional[Row] = await (await cur.execute("SELECT uses FROM invites WHERE code = ?;",[invite.code])).fetchone()
-                if saved_uses_row and saved_uses_row[0] >= 0 and invite.uses != saved_uses_row[0]:
+                if saved_uses_row and invite.uses != saved_uses_row[0]:
                     used_invites.append(invite)
                 await cur.execute(
                     """
@@ -199,7 +199,7 @@ class Module(ModuleBase):
                         uses = ?
                     WHERE code = ?
                     """,
-                    [invite.uses or -1,invite.code]
+                    [invite.uses or 0,invite.code]
                 )
         return used_invites
 
