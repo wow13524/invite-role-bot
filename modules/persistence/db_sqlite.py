@@ -10,21 +10,25 @@ if TYPE_CHECKING:
 
 class Module(ModuleBase):
     def __init__(self,bot: 'Bot') -> None:
-        self.bot: Bot = bot
-        self.config: PersistenceConfig = self.bot.config.get(PersistenceConfig)
-        self.connection: Connection
+        self._bot: Bot = bot
+        self._config: PersistenceConfig = self._bot.config.get(PersistenceConfig)
+        self._connection: Connection
+    
+    @property
+    def connection(self):
+        return self._connection
     
     async def init(self) -> None:
-        self.connection = await connect(join(self.bot.work_dir,self.config.db_name),isolation_level=None)
-        cur: Cursor = await self.connection.cursor()
-        await cur.execute(f"PRAGMA auto_vacuum = {self.config.auto_vacuum};")
+        self._connection = await connect(join(self._bot.work_dir,self._config.db_name),isolation_level=None)
+        cur: Cursor = await self._connection.cursor()
+        await cur.execute(f"PRAGMA auto_vacuum = {self._config.auto_vacuum};")
         await cur.execute("VACUUM;")
-        if self.config.write_ahead_logging:
+        if self._config.write_ahead_logging:
             await cur.execute("PRAGMA journal_mode = WAL;")
     
     async def postinit(self) -> None:
-        func_inject: FuncInject = self.bot.get_module("modules.core.func_inject")
+        func_inject: FuncInject = self._bot.get_module("modules.core.func_inject")
         func_inject.inject(self.close)
     
     async def close(self):
-        await self.connection.close()
+        await self._connection.close()

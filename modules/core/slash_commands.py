@@ -8,19 +8,23 @@ if TYPE_CHECKING:
 
 class Module(ModuleBase):
     def __init__(self,bot: 'Bot') -> None:
-        self.bot: Bot = bot
+        self._bot: Bot = bot
         self._cmds_synced: bool = False
-        self.cmd_tree: CommandTree[Bot]
+        self._cmd_tree: CommandTree[Bot]
+    
+    @property
+    def cmd_tree(self) -> CommandTree['Bot']:
+        return self._cmd_tree
     
     async def init(self) -> None:
-        self.cmd_tree = CommandTree(self.bot)
+        self._cmd_tree = CommandTree(self._bot)
     
     async def postinit(self) -> None:
-        func_inject: FuncInject = self.bot.get_module("modules.core.func_inject")
+        func_inject: FuncInject = self._bot.get_module("modules.core.func_inject")
         func_inject.inject(self.on_ready)
     
     async def on_ready(self):
-        await self.bot.wait_until_ready()
+        await self._bot.wait_until_ready()
         if not self._cmds_synced:
-            await self.cmd_tree.sync()
+            await self._cmd_tree.sync()
             self._cmds_synced = True
