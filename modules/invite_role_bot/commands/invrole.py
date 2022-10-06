@@ -25,11 +25,11 @@ def permission_check(embed: Embed,permissions: Permissions) -> None:
 
 class Module(ModuleBase):
     def __init__(self,bot: 'Bot'):
-        self.bot: Bot = bot
+        self._bot: Bot = bot
     
     async def postinit(self):
-        persistence_layer: PersistenceLayer = self.bot.get_module("modules.invite_role_bot.persistence_layer")
-        slash_commands: SlashCommands = self.bot.get_module("modules.core.slash_commands")
+        persistence_layer: PersistenceLayer = self._bot.get_module("modules.invite_role_bot.persistence_layer")
+        slash_commands: SlashCommands = self._bot.get_module("modules.core.slash_commands")
         cmd_tree: CommandTree[Bot] = slash_commands.cmd_tree
 
         invrole_group: Group = Group(name="invrole",description="Manage invite-role connections within this guild.",guild_only=True,default_permissions=Permissions(manage_guild=True,manage_roles=True))
@@ -44,7 +44,7 @@ class Module(ModuleBase):
             await interaction.response.defer(ephemeral=True,thinking=True)
             try:
                 invite_url = f"https://discord.gg/{invite_url.split('/')[-1]}"
-                invite: Invite = await self.bot.fetch_invite(invite_url)
+                invite: Invite = await self._bot.fetch_invite(invite_url)
             except NotFound:
                 response_embed = invalid_invite_response.embed(interaction,invite_url)
             else:

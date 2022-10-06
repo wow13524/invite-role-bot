@@ -22,26 +22,30 @@ class PaginationView(View):
         self._embed: Embed = embed
         self._embed_proxy: Embed = embed.copy().clear_fields()
         self._fields: List[List[EmbedField]] = [[]]
-        self.page: int = 0
+        self._page: int = 0
 
-        self.nav_button_first: Button[PaginationView] = NavButton(NAV_FIRST)
-        self.nav_button_back: Button[PaginationView] = NavButton(NAV_BACK)
-        self.nav_button_forward: Button[PaginationView] = NavButton(NAV_FORWARD)
-        self.nav_button_last: Button[PaginationView] = NavButton(NAV_LAST)
+        self._nav_button_first: Button[PaginationView] = NavButton(NAV_FIRST)
+        self._nav_button_back: Button[PaginationView] = NavButton(NAV_BACK)
+        self._nav_button_forward: Button[PaginationView] = NavButton(NAV_FORWARD)
+        self._nav_button_last: Button[PaginationView] = NavButton(NAV_LAST)
 
-        self.add_item(self.nav_button_first).add_item(self.nav_button_back).add_item(self.nav_button_forward).add_item(self.nav_button_last)
+        self.add_item(self._nav_button_first).add_item(self._nav_button_back).add_item(self._nav_button_forward).add_item(self._nav_button_last)
     
+    @property
+    def page(self) -> int:
+        return self._page
+
     def _update_buttons(self):
-        self.nav_button_first.disabled = self.nav_button_back.disabled = self.page == 0
-        self.nav_button_forward.disabled = self.nav_button_last.disabled = self.page == len(self._fields)-1
+        self._nav_button_first.disabled = self._nav_button_back.disabled = self._page == 0
+        self._nav_button_forward.disabled = self._nav_button_last.disabled = self._page == len(self._fields)-1
 
     def set_page(self,page: int) -> None:
-        self.page = page%len(self._fields)
+        self._page = page%len(self._fields)
         self._embed.clear_fields()
         for field in self._fields[page]:
             self._embed.add_field(**field)
         self._embed.add_field(name="‍",value="‍",inline=False)  #bottom padding
-        self._embed.set_footer(text=f"Page {self.page+1} of {len(self._fields)}")
+        self._embed.set_footer(text=f"Page {self._page+1} of {len(self._fields)}")
         self._update_buttons()
 
     def add_field(self,*,name: str,value: str,inline: bool=True) -> None:
@@ -55,7 +59,7 @@ class PaginationView(View):
             "value": value,
             "inline": inline
         })
-        self.set_page(self.page)
+        self.set_page(self._page)
     
     async def update_interaction(self,interaction: Interaction) -> None:
         await interaction.response.edit_message(embed=self._embed,view=self)
