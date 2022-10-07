@@ -73,7 +73,7 @@ class Module(ModuleBase):
             try:
                 await member.add_roles(*active_roles,reason=f"Invite-roles for {used_invite.code}")
             except NotFound:
-                pass
+                pass    #Member no longer belongs to the guild (possibly left while fetching and updating invites)
     
     async def on_shard_connect(self,shard_id: int) -> None:
         await self._bot.wait_until_ready()
