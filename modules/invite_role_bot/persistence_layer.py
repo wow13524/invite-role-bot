@@ -5,7 +5,7 @@ from discord import Guild,Invite,Object,PartialInviteChannel,PartialInviteGuild,
 from discord.abc import GuildChannel
 from discord.errors import NotFound
 from modubot import ModuleBase
-from typing import List,Optional,Tuple,TYPE_CHECKING,Union
+from typing import Dict,List,Optional,Tuple,TYPE_CHECKING,Union
 
 if TYPE_CHECKING:
     from modubot import Bot
@@ -173,16 +173,18 @@ class Module(ModuleBase):
 
     async def get_invite_roles(self,guild: Guild,invite_code: str) -> Tuple[List[Role],List[Role]]:
         invite_role_ids: List[int] = await self._raw_get_invite_role_ids(invite_code)
+        role_id_map: Dict[int,Role] = {role.id: role for role in guild.roles}
         active_roles: List[Role] = []
         inactive_roles: List[Role] = []
-        for role in guild.roles:
-            if role.id in invite_role_ids:
+        for role_id in invite_role_ids:
+            if role_id in role_id_map:
+                role: Role = role_id_map[role_id]
                 if role < guild.me.top_role:
                     active_roles.append(role)
                 else:
                     inactive_roles.append(role)
             else:
-                await self._raw_remove_invite_role(guild.id,invite_code,role.id)
+                await self._raw_remove_invite_role(guild.id,invite_code,role_id)
         return active_roles,inactive_roles
     
     async def update_invite_uses(self,guild: Guild) -> List[Invite]:
