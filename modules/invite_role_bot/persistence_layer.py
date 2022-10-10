@@ -135,7 +135,7 @@ class Module(ModuleBase):
         else:   #Slower fallback to still serve invites even without manage_guild
             for invite_code in await self._raw_get_invite_codes(guild.id):
                 try:
-                    self._cached_invites[guild.id].append(await self._bot.fetch_invite(invite_code))
+                    self._cached_invites[guild.id].append(await self._bot.fetch_invite(invite_code,with_counts=False,with_expiration=False))
                 except NotFound:
                     pass
     
@@ -193,7 +193,7 @@ class Module(ModuleBase):
         if guild.me.guild_permissions.manage_guild:
             for invite in await self.get_invites(guild,False):
                 saved_uses_row: Optional[Row] = await (await cur.execute("SELECT uses FROM invites WHERE code = ?;",[invite.code])).fetchone()
-                if saved_uses_row and invite.uses != saved_uses_row[0]:
+                if saved_uses_row and invite.uses > saved_uses_row[0]:
                     used_invites.append(invite)
                 await cur.execute(
                     """
