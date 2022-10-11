@@ -42,7 +42,7 @@ class Module(ModuleBase):
         try:
             before_vanity: Optional[Invite] = await before.vanity_invite()
             after_vanity: Optional[Invite] = await after.vanity_invite()
-            if after_vanity and after_vanity != before_vanity:
+            if after_vanity and after_vanity != before_vanity and await self._persistence_layer.invite_exists(after_vanity.code):
                 await self._persistence_layer.update_invite_uses(after)
         except Forbidden or NotFound:
             pass

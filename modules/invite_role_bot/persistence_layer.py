@@ -111,6 +111,9 @@ class Module(ModuleBase):
             await cur.execute("DELETE FROM roles WHERE invite_code = ?;",[invite_code])
         await self._raw_remove_invite_if_unused(guild_id,invite_code)
 
+    async def invite_exists(self,invite_code: str) -> bool:
+        return await self._raw_invite_exists(invite_code)
+
     async def invite_role_exists(self,invite_code: str,role: Optional[Role]) -> bool:
         return await self._raw_invite_role_exists(invite_code,role.id if role else None)
 
@@ -132,6 +135,7 @@ class Module(ModuleBase):
                 except NotFound:
                     pass
             self._cached_invites[guild.id] += await guild.invites()
+            #print(guild)
         else:   #Slower fallback to still serve invites even without manage_guild
             for invite_code in await self._raw_get_invite_codes(guild.id):
                 try:
