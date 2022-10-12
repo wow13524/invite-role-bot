@@ -15,12 +15,15 @@ class Module(ModuleBase):
         self._connection: Connection
     
     @property
-    def connection(self):
+    def connection(self) -> Connection:
         return self._connection
+    
+    async def cursor(self) -> Cursor:
+        return await self.connection.cursor()
     
     async def init(self) -> None:
         self._connection = await connect(join(self._bot.work_dir,self._config.db_name),isolation_level=None)
-        cur: Cursor = await self._connection.cursor()
+        cur: Cursor = await self.cursor()
         await cur.execute(f"PRAGMA auto_vacuum = {self._config.auto_vacuum};")
         await cur.execute("VACUUM;")
         if self._config.write_ahead_logging:
