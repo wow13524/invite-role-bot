@@ -60,6 +60,8 @@ class Module(ModuleBase):
         await self._persistence_layer.cache_guild_invites_remove(invite.guild,invite)
 
     async def on_member_join(self,member: Member) -> None:
+        if member.bot:
+            return
         if not await self.prepare_guild(member.guild):
             return
         if not member.guild.me.guild_permissions.manage_guild or not member.guild.me.guild_permissions.manage_roles:
