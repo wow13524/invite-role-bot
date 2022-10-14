@@ -134,7 +134,6 @@ class Module(ModuleBase):
                 except NotFound:
                     pass
             self._cached_invites[guild.id] += await guild.invites()
-            #print(guild)
         else:   #Slower fallback to still serve invites even without manage_guild
             for invite_code in await self._raw_get_invite_codes(guild.id):
                 try:
