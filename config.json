@@ -7,12 +7,14 @@
         "intents": {
             "guilds": true,
             "invites": true,
-            "members": true
+            "members": true,
+            "reactions": true
         },
         "enabled_modules": [
             "modules.core",
             "modules.invite_role_bot",
-            "modules.persistence"
+            "modules.persistence",
+            "modules.reaction_roles"
         ],
         "token": ""
     },
