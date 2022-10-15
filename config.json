@@ -2,7 +2,12 @@
     "BotConfig": {
         "client_args": {
             "chunk_guilds_at_startup": false,
-            "max_messages": null
+            "max_messages": null,
+            "member_cache_flags": {
+                "_class": "MemberCacheFlags",
+                "voice": false,
+                "joined": false
+            }
         },
         "intents": {
             "guilds": true,
