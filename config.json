@@ -2,6 +2,7 @@
     "BotConfig": {
         "client_args": {
             "chunk_guilds_at_startup": false,
+            "heartbeat_timeout": 20,
             "max_messages": null,
             "member_cache_flags": {
                 "_class": "MemberCacheFlags",
