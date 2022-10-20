@@ -23,3 +23,7 @@ A bot that assigns roles to new guild members depending on the invite URL used t
 Clone the repository, populate `BotConfig.token` in the provided `config.json`, and run `main.py`.
 
 The bot should connect to Discord and function with no further configuration needed.
+
+## TODO
+- Reaction roles (submodule)
+- Redundant worker threads to mitigate dropped events
