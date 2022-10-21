@@ -8,6 +8,8 @@ from discord.ui import View
 from modubot import ModuleBase
 from typing import Dict,Generator,List,Optional,TYPE_CHECKING
 
+#import time
+
 from ..responses import *
 if TYPE_CHECKING:
     from modubot import Bot
@@ -130,6 +132,7 @@ class Module(ModuleBase):
             response_view: Optional[View]
             invite_roles_raw: Dict[str,invrole_list_response.RolesPair] = {}
             await interaction.response.defer(ephemeral=True,thinking=True)
+            #t = time.time()
             for invite_code in await persistence_layer.get_invite_codes(interaction.guild):
                 active_roles: List[Role]
                 inactive_roles: List[Role]
@@ -138,8 +141,12 @@ class Module(ModuleBase):
                     "active_roles": active_roles,
                     "inactive_roles": inactive_roles
                 }
+            #u = time.time()
             guild_invites: List[Invite] = await persistence_layer.get_invites(interaction.guild)
+            #v = time.time()
             response_embed,response_view = invrole_list_response.embed(interaction,invite_roles_raw,guild_invites)
+            #w = time.time()
+            #print(u-t,v-u,w-v,w-t)
             permission_check(response_embed,interaction.guild.me.guild_permissions)
             await interaction.followup.send(embed=response_embed,view=response_view,ephemeral=True)
         
