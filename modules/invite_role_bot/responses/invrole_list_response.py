@@ -16,7 +16,7 @@ def format_roles_pair(roles_pair: RolesPair) -> str:
     visible_roles_inactive: List[Role] = roles_pair["inactive_roles"][:max(0,len(visible_roles_active)-MAX_ROLES_PREVIEW)]
     role_mentions_active: str = ", ".join([role.mention for role in visible_roles_active])
     role_mentions_inactive: str = ", ".join([f"~~{role.mention}~~" for role in visible_roles_inactive])
-    return f"{role_mentions_active}{', ' if visible_roles_active and visible_roles_active else ''}{role_mentions_inactive}{f' *+{total_roles - MAX_ROLES_PREVIEW} more*' if total_roles > MAX_ROLES_PREVIEW else ''}"
+    return f"{role_mentions_active}{', ' if visible_roles_active and visible_roles_inactive else ''}{role_mentions_inactive}{f' *+{total_roles - MAX_ROLES_PREVIEW} more*' if total_roles > MAX_ROLES_PREVIEW else ''}"
 
 def embed(interaction: Interaction,invite_roles_raw: Dict[str,RolesPair],guild_invites: List[Invite]) -> Tuple[Embed,PaginationView]:
     assert interaction.guild
