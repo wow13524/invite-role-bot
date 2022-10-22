@@ -4,14 +4,19 @@ from typing import Dict,List,Optional,Tuple,TypedDict
 from . import base_response
 from .pagination_view import PaginationView
 
+MAX_ROLES_PREVIEW: int = 30
+
 class RolesPair(TypedDict):
     active_roles: List[Role]
     inactive_roles: List[Role]
 
 def format_roles_pair(roles_pair: RolesPair) -> str:
-    active_roles: str = ", ".join([role.mention for role in roles_pair["active_roles"]])
-    inactive_roles: str = ", ".join([f"~~{role.mention}~~" for role in roles_pair["inactive_roles"]])
-    return f"{active_roles}{', ' if active_roles and inactive_roles else ''}{inactive_roles}"
+    total_roles: int = len(roles_pair['active_roles']) + len(roles_pair['inactive_roles'])
+    visible_roles_active: List[Role] = roles_pair["active_roles"][:MAX_ROLES_PREVIEW]
+    visible_roles_inactive: List[Role] = roles_pair["inactive_roles"][:max(0,len(visible_roles_active)-MAX_ROLES_PREVIEW)]
+    role_mentions_active: str = ", ".join([role.mention for role in visible_roles_active])
+    role_mentions_inactive: str = ", ".join([f"~~{role.mention}~~" for role in visible_roles_inactive])
+    return f"{role_mentions_active}{', ' if visible_roles_active and visible_roles_active else ''}{role_mentions_inactive}{f' *+{total_roles - MAX_ROLES_PREVIEW} more*' if total_roles > MAX_ROLES_PREVIEW else ''}"
 
 def embed(interaction: Interaction,invite_roles_raw: Dict[str,RolesPair],guild_invites: List[Invite]) -> Tuple[Embed,PaginationView]:
     assert interaction.guild
