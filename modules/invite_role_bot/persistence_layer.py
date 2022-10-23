@@ -124,22 +124,23 @@ class Module(ModuleBase):
         return await self._raw_get_invite_codes(guild.id)
 
     async def cache_guild_invites(self,guild: Guild) -> None:
-        self._cached_invites[guild.id] = []
+        cached_invites: List[Invite] = []
         if guild.me.guild_permissions.manage_guild:
             if guild.vanity_url:
                 try:
                     vanity_invite: Optional[Invite] = await guild.vanity_invite()
                     if vanity_invite:
-                        self._cached_invites[guild.id].append(vanity_invite)
+                        cached_invites.append(vanity_invite)
                 except NotFound:
                     pass
-            self._cached_invites[guild.id] += await guild.invites()
+            cached_invites += await guild.invites()
         else:   #Slower fallback to still serve invites even without manage_guild
             for invite_code in await self._raw_get_invite_codes(guild.id):
                 try:
-                    self._cached_invites[guild.id].append(await self._bot.fetch_invite(invite_code,with_counts=False,with_expiration=False))
+                    cached_invites.append(await self._bot.fetch_invite(invite_code,with_counts=False,with_expiration=False))
                 except NotFound:
                     pass
+        self._cached_invites[guild.id] = cached_invites
     
     async def cache_guild_invites_add(self,guild: Guild,invite: Invite) -> None:
         if guild.id in self._cached_invites:
