@@ -28,14 +28,16 @@ class PaginationView(View):
         self._nav_button_back: Button[PaginationView] = NavButton(NAV_BACK)
         self._nav_button_forward: Button[PaginationView] = NavButton(NAV_FORWARD)
         self._nav_button_last: Button[PaginationView] = NavButton(NAV_LAST)
-
-        self.add_item(self._nav_button_first).add_item(self._nav_button_back).add_item(self._nav_button_forward).add_item(self._nav_button_last)
     
     @property
     def page(self) -> int:
         return self._page
 
     def _update_buttons(self):
+        if len(self._fields) == 1 and self.children:
+            self.clear_items()
+        elif len(self._fields) > 1 and not self.children:
+            self.add_item(self._nav_button_first).add_item(self._nav_button_back).add_item(self._nav_button_forward).add_item(self._nav_button_last)
         self._nav_button_first.disabled = self._nav_button_back.disabled = self._page == 0
         self._nav_button_forward.disabled = self._nav_button_last.disabled = self._page == len(self._fields)-1
 
