@@ -16,6 +16,9 @@ A bot that assigns roles to new guild members depending on the invite URL used t
 > 
 > ### `/invrole list`
 > Shows a list of all invite-role connections within this guild.
+>
+> ### `/invclone`
+> Creates an identical clone of an invite.
 
 ## Getting Started
 *Note: The bot application used should have the **Server Members Intent** enabled through the Discord developers dashboard.*
