@@ -26,5 +26,6 @@ def embed(interaction: Interaction,config: HelpConfig) -> Tuple[Embed,HelpView]:
     embed.add_field(name="/invrole connect [invite_url: str] [role: Role]",value="Connects any invite URL from the guild to any role. One invite URL can have multiple roles connected.",inline=False)
     embed.add_field(name="/invrole disconnect [invite_url: str] <role: Role>",value="Disconnects one or all roles from the specified invite URL. If a role is given, only that role is disconnected from the invite URL; otherwise, every role associated with the given invite URL will be disconnected.",inline=False)
     embed.add_field(name="/invrole list",value="Shows a list of all invite-role connections within this guild.",inline=False)
+    embed.add_field(name="/invclone [invite_url: str]",value="Creates an identical clone of an invite.",inline=False)
     help_view: HelpView = HelpView(config=config)
     return (embed,help_view)
