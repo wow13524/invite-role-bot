@@ -81,7 +81,7 @@ class Module(ModuleBase):
         await self._bot.wait_until_ready()
         await self._bot.change_presence(status=Status.idle,activity=Game(name="Starting up..."),shard_id=shard_id)
         shard_guilds: List[Guild] = [guild for guild in self._bot.guilds if guild.shard_id == shard_id]
-        for guild in tqdm(shard_guilds,desc=f"Caching Invites for Shard #{shard_id}",unit="guilds"):
+        for guild in tqdm(shard_guilds,desc=f"Caching Invites for Shard #{shard_id}",unit=" guilds"):
             if not guild.unavailable:
                 try:
                     await self.prepare_guild(guild)
