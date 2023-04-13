@@ -4,19 +4,35 @@
 import json
 from os import path
 from typeguard import check_type
-from typing import Any,List,Dict,Generator,Literal,Optional,Tuple,Type,TypeVar,Union,get_origin,get_type_hints
+from typing import Any,List,Dict,Generator,Literal,Optional,Tuple,Type,TypeVar,Union,cast,get_args,get_origin,get_type_hints
 
 T = TypeVar("T",bound="PropertyDict")
+
+def _parse_value(value: Any,missing_fields: List[str],tp: type,subpath: str) -> Any:
+    origin: Optional[type] = get_origin(tp)
+    if isinstance(value,PropertyDict):
+        value = dict(value)
+    if origin == dict:
+        value = value.copy()
+    elif origin == list:
+        value = [_parse_value(x,missing_fields,get_args(tp)[0],f"{subpath}[{i}]") for i,x in enumerate(value)]
+    elif origin == Any or origin == Literal or origin == Union:
+        pass
+    elif issubclass(tp,PropertyDict):
+        value = tp(missing_fields,value,subpath)
+    return value
 
 class TypedProperties:
     def __init__(self):
         self._types: Dict[str,type] = get_type_hints(self)
     
     def __iter__(self) -> Generator[Tuple[str,Any],None,None]:
-        for attr in self._types:
+        for attr,tp in self._types.items():
             value: Any = getattr(self,attr)
             if isinstance(value,TypedProperties):
                 value = dict(value)
+            elif isinstance(value,list) and issubclass(get_args(tp)[0],TypedProperties):
+                value = list(map(dict,cast(List[TypedProperties],value)))
             yield attr, value
 
 class PropertyDict(TypedProperties):
@@ -26,16 +42,8 @@ class PropertyDict(TypedProperties):
 
         for attr,tp in self._types.items():
             subpath: str = f"{path}.{attr}"
-            value: Any = getattr(self.__class__,attr) if attr not in data else data[attr]
-            if isinstance(value,PropertyDict):
-                value = dict(value)
-            origin: Optional[type] = get_origin(tp)
-            if origin == list or origin == dict:
-                value = value.copy()
-            elif origin == Literal:
-                pass
-            elif issubclass(tp,PropertyDict):
-                value = tp(missing_fields,value,subpath)
+            value: Any = data[attr] if attr in data else None if type(None) in get_args(tp) else getattr(self.__class__,attr)
+            value = _parse_value(value,missing_fields,tp,subpath)
             check_type(subpath,value,tp)
             setattr(self,attr,value)
 
