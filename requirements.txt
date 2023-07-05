@@ -2,4 +2,4 @@ aiosqlite
 cachetools
 discord.py
 tqdm
-typeguard
+typeguard==2.13.3
